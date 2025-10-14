@@ -1,0 +1,44 @@
+#Modify File - .dotenv to .env.local or .env
+
+#Better Auth
+BETTER_AUTH_SECRET=
+// Generate from https://www.better-auth.com/docs/installation
+BETTER_AUTH_URL=http://localhost:3000 #Base URL of your app
+
+#Privider Secret
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+MONGO_DB_CONNECTION_STRING=mongodb+srv://<user>:<password>@<clusterLink>/<CollectionNAMEoRrEMOVEtHIS>?retryWrites=true&w=majority&appName=<APPNAME>
+
+# Email API
+SMTP_HOST=
+SMTP_PORT=587, #Use 465 for SSL
+SMTP_SECURE= #true for 465, false for other ports
+MAIL_USER=
+MAIL_PASS=
+
+# Extra APIS
+imgbbKey=
+NEXT_PUBLIC_MAPTILERKEY=
+
+
+# SITE
+NEXT_PUBLIC_SITE_NAME="Biddut's Project"
+NEXT_PUBLIC_SITE_DESCRIPTION="Biddut's Project"
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPPORT_EMAIL=a@a.com
+SITE_EMAIL=
+NEXT_PUBLIC_SENDER_NAME="Biddut's Project"
+NEXT_PUBLIC_LOGO=
+NEXT_PUBLIC_SITE_LOCALE=
+NEXT_PUBLIC_SITE_keywords=
+SITE_XHandle=
+NEXT_PUBLIC_SITE_FACEBOOK=
+NEXT_PUBLIC_SITE_INSTAGRAM=
+
+#Enviroment 
+# NODE_ENV=production
+NODE_ENV=development
