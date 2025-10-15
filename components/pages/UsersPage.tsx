@@ -184,6 +184,11 @@ export const UsersPage = ({ extra }: { extra: { search: string } }) => {
     },
     [dispatch, currentPage]
   );
+
+  const users = usersData?.data || [];
+  const totalPages = usersData?.totalPages || 1;
+  const total = usersData?.total || 0;
+
   // Go to last available page on Last Item Delete
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
@@ -262,10 +267,6 @@ export const UsersPage = ({ extra }: { extra: { search: string } }) => {
       </div>
     );
   }
-
-  const users = usersData?.data || [];
-  const totalPages = usersData?.totalPages || 1;
-  const total = usersData?.total || 0;
 
   const isAnyMutationLoading =
     isDeleting || isToggling || isBulkDeleting || isBulkToggling;

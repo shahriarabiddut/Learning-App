@@ -1,3 +1,4 @@
+import { DeleteConfirmationModal } from "@/components/shared/DeleteConfirmationModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,15 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { deleteUser } from "@/lib/redux-features/user/userSlice";
-import { useAppDispatch } from "@/lib/redux/hooks";
-import { IUser } from "@/models/users.model";
-import { useState } from "react";
-import { toast } from "sonner";
-import { DeleteConfirmationModal } from "@/components/shared/DeleteConfirmationModal";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { formatDate } from "@/lib/helper/clientHelperfunc";
 import { useDeleteUserMutation } from "@/lib/redux-features/user/userApi";
+import { IUser } from "@/models/users.model";
+import { toast } from "sonner";
 
 interface UserModalProps {
   viewModalOpen: boolean;
@@ -104,30 +101,8 @@ export const UserModal = ({
                       >
                         Acount: {selectedUser.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      {isSuperAdmin && selectedUser?.store && (
-                        <Badge
-                          variant={
-                            !selectedUser.isActive
-                              ? "outline"
-                              : "secondaryGreen"
-                          }
-                        >
-                          {selectedUser.store != "0"
-                            ? selectedUser.store
-                            : "General Store"}
-                        </Badge>
-                      )}
                     </div>
                   </div>
-
-                  {isSuperAdmin && selectedUser?.storeType !== "0" && (
-                    <div className="flex space-x-2 text-sm text-muted-foreground">
-                      <span className="font-medium">Store Type:</span>
-                      <span>
-                        {selectedUser?.storeType || "No Store Type available"}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 

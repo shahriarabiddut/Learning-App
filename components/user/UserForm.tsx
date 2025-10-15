@@ -327,47 +327,6 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                     />
                   )}
 
-                  {/* Store Fields - Only for Super Admin */}
-                  {isSuperAdmin && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="store"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Store ID</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Store ID"
-                                {...field}
-                                className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="storeType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Store Type</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Store type"
-                                {...field}
-                                className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
                   {/* Status Fields */}
                   <div className="grid grid-cols-2 gap-3">
                     <FormField
