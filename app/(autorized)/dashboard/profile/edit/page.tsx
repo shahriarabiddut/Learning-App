@@ -39,7 +39,7 @@ const EditProfile = async () => {
         </div>
       )}
 
-      {!credentialProvider ? (
+      {credentialProvider ? (
         <>
           <div className="p-4 pt-6 md:px-8 md:py-2">
             <ProviderDetails provider={oAuthProvider} />

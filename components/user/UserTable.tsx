@@ -23,7 +23,7 @@ interface UserTableProps {
   handleToggleStatusClick: (id: string, currentStatus: boolean) => void;
   handleBulkDelete: (ids: string[]) => void;
   handleBulkStatusToggle: (ids: string[], targetStatus: boolean) => void;
-  canManageUsers: boolean;
+  canManage: boolean;
   isLoading: boolean;
 }
 
@@ -36,7 +36,7 @@ export const UserTable = ({
   handleToggleStatusClick,
   handleBulkDelete,
   handleBulkStatusToggle,
-  canManageUsers,
+  canManage,
   isLoading,
 }: UserTableProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -108,7 +108,7 @@ export const UserTable = ({
 
   return (
     <div className="w-full">
-      {selectedUsers.length > 0 && canManageUsers && (
+      {selectedUsers.length > 0 && canManage && (
         <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-blue-900">
@@ -179,7 +179,7 @@ export const UserTable = ({
                     <span>User</span>
                   </div>
                 </TableHead>
-                {canManageUsers && (
+                {canManage && (
                   <>
                     <TableHead className="text-center font-semibold text-gray-700 hidden md:table-cell">
                       Role
@@ -243,7 +243,7 @@ export const UserTable = ({
                             <div className="font-medium text-gray-900 truncate">
                               {user?.name}
                             </div>
-                            {canManageUsers && (
+                            {canManage && (
                               <div className="flex items-center gap-2 mt-0.5 md:hidden">
                                 <span className="text-xs text-gray-500 capitalize">
                                   {user?.role}
@@ -265,7 +265,7 @@ export const UserTable = ({
                       </div>
                     </TableCell>
 
-                    {canManageUsers && (
+                    {canManage && (
                       <>
                         <TableCell className="text-center hidden md:table-cell">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
@@ -307,7 +307,7 @@ export const UserTable = ({
               {users.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={canManageUsers ? 4 : 1}
+                    colSpan={canManage ? 4 : 1}
                     className="text-center py-12 text-gray-500"
                   >
                     <div className="flex flex-col items-center gap-2">

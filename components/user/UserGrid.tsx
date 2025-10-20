@@ -17,7 +17,7 @@ interface UserGridProps {
   handleToggleStatusClick: (id: string, currentStatus: boolean) => void;
   handleBulkDelete: (ids: string[]) => void;
   handleBulkStatusToggle: (ids: string[], targetStatus: boolean) => void;
-  canManageUsers: boolean;
+  canManage: boolean;
   isLoading: boolean;
 }
 
@@ -30,8 +30,8 @@ export const UserGrid = ({
   handleToggleStatusClick,
   handleBulkDelete,
   handleBulkStatusToggle,
-  canManageUsers,
-  isLoading,
+  canManage = false,
+  isLoading = false,
 }: UserGridProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
@@ -109,7 +109,7 @@ export const UserGrid = ({
   };
   return (
     <>
-      {selectedUsers.length > 0 && (
+      {selectedUsers.length > 0 && canManage && (
         <div className="flex items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3">
           <span className="text-sm font-medium">
             {selectedUsers.length} selected
@@ -161,14 +161,16 @@ export const UserGrid = ({
           >
             {/* Checkbox */}
             <div className="absolute top-[2%] right-[0%]">
-              <Checkbox
-                checked={selectedUsers.includes(user?.id)}
-                disabled={user.id === userId}
-                onCheckedChange={(checked) =>
-                  handleCheckboxChange(checked, index, user?.id)
-                }
-                className="mr-2"
-              />
+              {canManage && (
+                <Checkbox
+                  checked={selectedUsers.includes(user?.id)}
+                  disabled={user.id === userId}
+                  onCheckedChange={(checked) =>
+                    handleCheckboxChange(checked, index, user?.id)
+                  }
+                  className="mr-2"
+                />
+              )}
             </div>
 
             {/* Card Content */}
@@ -205,17 +207,19 @@ export const UserGrid = ({
             </div>
 
             {/* Actions */}
-            <UserActions
-              user={user}
-              onEdit={() => handleEditClick(user)}
-              onView={() => handleViewClick(user)}
-              onDelete={() => handleDeleteClick(user.id)}
-              showtoggleButtons={true}
-              onToggleStatus={() =>
-                handleToggleStatusClick(user.id, user.isActive)
-              }
-              disabled={user.id === userId}
-            />
+            {canManage && (
+              <UserActions
+                user={user}
+                onEdit={() => handleEditClick(user)}
+                onView={() => handleViewClick(user)}
+                onDelete={() => handleDeleteClick(user.id)}
+                showtoggleButtons={true}
+                onToggleStatus={() =>
+                  handleToggleStatusClick(user.id, user.isActive)
+                }
+                isLoading={isLoading}
+              />
+            )}
           </Card>
         ))}
       </div>

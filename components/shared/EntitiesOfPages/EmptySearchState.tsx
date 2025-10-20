@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { capitalizeWords } from "@/lib/helper/clientHelperfunc";
+import {
+  capitalizeWords,
+  singleTitleToPluralY,
+} from "@/lib/helper/clientHelperfunc";
 import { Search } from "lucide-react";
 import { memo } from "react";
 import { FaPlusCircle } from "react-icons/fa";
@@ -21,10 +24,11 @@ export const EmptySearchState = memo(
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <Icon className="h-24 w-24 text-muted-foreground mb-4" />
       <h3 className="text-lg font-medium text-foreground mb-1">
-        No {title}s found for "{searchQuery}"
+        No {singleTitleToPluralY(title)} found for "{searchQuery}"
       </h3>
       <p className="text-muted-foreground mb-6 max-w-md">
-        Try adjusting your search terms or clear the search to see all {title}s.
+        Try adjusting your search terms or clear the search to see all{" "}
+        {singleTitleToPluralY(title)}.
       </p>
       <Button variant="outline" onClick={onClearSearch}>
         Clear Search
@@ -50,10 +54,11 @@ export const EmptyDataState = memo(
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <Icon className="h-24 w-24 text-muted-foreground mb-4" />
       <h3 className="text-lg font-medium text-foreground mb-1">
-        No {title}s found
+        No {singleTitleToPluralY(title)} found
       </h3>
       <p className="text-muted-foreground mb-6 max-w-md">
-        You haven't added any {title}s yet. Add your first {title} below.
+        You haven't added any {singleTitleToPluralY(title)} yet. Add your first{" "}
+        {title} below.
       </p>
       {canManage && (
         <Button onClick={onAddNew} className="gap-2">

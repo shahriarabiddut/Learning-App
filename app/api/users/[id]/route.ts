@@ -7,6 +7,39 @@ import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  // Authenticate and check permission
+  const user = await AuthenticatedorNot(request, {
+    checkPermission: true,
+    Permission: PERMISSIONS.VIEW_USERS,
+    checkValidId: true,
+    IDtoCheck: id,
+  });
+  if (user instanceof NextResponse) return user;
+
+  try {
+    // Find user by _id
+    const userData = await User.findById(id);
+    if (!userData) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    if (user.role != "admin" && userData.role == "admin") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    return NextResponse.json(userData);
+  } catch (err) {
+    console.error("Failed to fetch User:", err);
+    return NextResponse.json(
+      { error: "Failed to fetch User" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -106,6 +139,13 @@ export async function DELETE(
     if (!existingUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+    // If not Admin Then UnAutorized
+    if (existingUser && user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Unauthorized to Delete this Data!" },
+        { status: 403 }
+      );
+    }
     if (existingUser.role === "admin") {
       const superAdmin = isSuperAdmin(user);
       // If not SuperAdmin Then UnAutorized
@@ -116,6 +156,7 @@ export async function DELETE(
         );
       }
     }
+
     // Delete the user
     const deletedUser = await User.findByIdAndDelete(id);
     if (!deletedUser) {

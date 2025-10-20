@@ -58,7 +58,7 @@ const SearchInput = memo(
       refetch();
     };
     return (
-      <>
+      <div className="flex items-center gap-2">
         {loading ? (
           <div className="space-x-1" title="Refreshing">
             <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -79,7 +79,7 @@ const SearchInput = memo(
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={placeHolder}
-            className={`pl-8 pr-8 w-full`}
+            className={`pl-8 pr-8 w-[80vw] sm:w-[180px] lg:w-[240px]`}
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             aria-label="Search What You Are Looking For"
@@ -98,7 +98,7 @@ const SearchInput = memo(
             </Button>
           )}
         </div>
-      </>
+      </div>
     );
   }
 );

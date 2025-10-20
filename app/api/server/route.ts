@@ -3,6 +3,7 @@ import connectDB from "@/lib/connectDB";
 import { hasPermission } from "@/lib/middle/permissions";
 import { UserRole, UserType } from "@/lib/middle/roles";
 import { ServerUser } from "@/lib/types";
+import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 
 interface AuthOptions {
@@ -10,6 +11,8 @@ interface AuthOptions {
   role?: UserRole | UserRole[];
   checkPermission?: boolean;
   Permission?: string;
+  checkValidId?: boolean;
+  IDtoCheck?: string;
 }
 export async function GET(request: NextRequest) {
   const user = await AuthenticatedorNot(request);
@@ -27,6 +30,8 @@ export async function AuthenticatedorNot(
     role = UserRole.ADMIN,
     checkPermission = false,
     Permission,
+    checkValidId = false,
+    IDtoCheck = "",
   } = options;
 
   const session = await getServerSession();
@@ -53,9 +58,9 @@ export async function AuthenticatedorNot(
 
   const user = session.user as ServerUser;
 
-  if (checkRole) {
+  if (checkRole && user) {
     const allowedRoles = Array.isArray(role) ? role : [role];
-    if (!allowedRoles.includes(user?.role)) {
+    if (!allowedRoles.includes(user?.role as UserRole)) {
       return NextResponse.json(
         { error: "User not Allowed To Perform This Action!" },
         { status: 403 }
@@ -66,6 +71,16 @@ export async function AuthenticatedorNot(
   if (checkPermission && Permission) {
     if (!hasPermission(user.role as UserRole, Permission)) {
       return NextResponse.json({ error: "Access Denied" }, { status: 403 });
+    }
+  }
+
+  // Validate Mongo ObjectId
+  if (checkValidId) {
+    if (!IDtoCheck) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+    if (!mongoose.Types.ObjectId.isValid(IDtoCheck)) {
+      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
   }
 

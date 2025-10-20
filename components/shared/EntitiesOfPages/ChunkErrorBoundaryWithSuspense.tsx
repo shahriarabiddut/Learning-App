@@ -1,9 +1,17 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Suspense, ReactNode } from "react";
 
 // Error Boundary Component for chunk loading errors
-const ChunkErrorBoundary = ({ children }: { children: React.ReactNode }) => {
+const ChunkErrorBoundary = ({
+  children,
+  fallback,
+}: {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) => {
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
@@ -40,4 +48,16 @@ const ChunkErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-export default ChunkErrorBoundary;
+interface ChunkErrorBoundaryWithSuspenseProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+export const ChunkErrorBoundaryWithSuspense = ({
+  children,
+  fallback = null,
+}: ChunkErrorBoundaryWithSuspenseProps) => (
+  <ChunkErrorBoundary>
+    <Suspense fallback={fallback}>{children}</Suspense>
+  </ChunkErrorBoundary>
+);

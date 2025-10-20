@@ -22,6 +22,7 @@ interface UserModalProps {
   setDeleteDialogOpen: (open: boolean) => void;
   userToDelete: string | null;
   onUsersChange?: () => void;
+  canManage: boolean;
 }
 
 export const UserModal = ({
@@ -33,6 +34,7 @@ export const UserModal = ({
   setDeleteDialogOpen,
   userToDelete,
   onUsersChange,
+  canManage = false,
 }: UserModalProps) => {
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
   // Delete handler
@@ -115,15 +117,17 @@ export const UserModal = ({
                   >
                     Close
                   </Button>
-                  <Button
-                    variant="default"
-                    onClick={() => {
-                      onEdit(selectedUser);
-                      setViewModalOpen(false);
-                    }}
-                  >
-                    Edit User
-                  </Button>
+                  {canManage && (
+                    <Button
+                      variant="default"
+                      onClick={() => {
+                        onEdit(selectedUser);
+                        setViewModalOpen(false);
+                      }}
+                    >
+                      Edit User
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

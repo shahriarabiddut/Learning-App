@@ -1,8 +1,5 @@
 import { memo } from "react";
-import {
-  GridSkeletonLoader,
-  TableSkeletonLoader,
-} from "@/components/shared/Loader/SkeletonLoader";
+import { GridSkeletonLoader } from "@/components/shared/Loader/SkeletonLoader";
 
 interface PageSkeletonProps {
   items?: number;
@@ -11,7 +8,6 @@ interface PageSkeletonProps {
   xlcols?: number;
   showHeader?: boolean;
   className?: string;
-  view?: string;
 }
 
 const PageSkeleton = memo<PageSkeletonProps>(
@@ -22,7 +18,6 @@ const PageSkeleton = memo<PageSkeletonProps>(
     xlcols = 4,
     showHeader = true,
     className = "",
-    view = "grid",
   }) => (
     <div
       className={`flex-1 space-y-3 sm:space-y-4 lg:space-y-6 p-3 pt-4 sm:p-4 sm:pt-6 md:p-6 lg:p-8 animate-pulse ${className}`}
@@ -53,11 +48,12 @@ const PageSkeleton = memo<PageSkeletonProps>(
       )}
 
       {/* Grid Content */}
-      {view == "grid" ? (
-        <GridSkeletonLoader items={items} cols={cols} lgcols={lgcols} />
-      ) : (
-        <TableSkeletonLoader cols={cols} rows={items} />
-      )}
+      <GridSkeletonLoader
+        items={items}
+        cols={cols}
+        lgcols={lgcols}
+        xlcols={xlcols}
+      />
     </div>
   )
 );
