@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/lib/constants/env";
+import { API_SITE_URL } from "@/lib/constants/env";
 import {
   BulkActionResponse,
   FetchParams,
@@ -7,7 +7,7 @@ import {
 import { IUser } from "@/models/users.model";
 import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
 
-const BASE_URL = `${API_BASE_URL}/users`;
+const SITE_URL = `${API_SITE_URL}/users`;
 
 type PaginatedUsers = PaginatedParams<IUser>;
 
@@ -54,7 +54,7 @@ function safeParse<T = unknown>(str: string): T | null {
 
 const baseQueryWithRetry = retry(
   fetchBaseQuery({
-    baseUrl: BASE_URL,
+    baseUrl: SITE_URL,
     credentials: "include",
     timeout: 20000,
     prepareHeaders: (headers) => {

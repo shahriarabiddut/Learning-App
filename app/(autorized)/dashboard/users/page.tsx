@@ -5,11 +5,11 @@ import { generateMetadata } from "@/lib/seo/generateMetadata";
 
 // Dynamic Metadata generation for SEO
 export const metadata = generateMetadata({
-  title: `Users | ${SITE_DEFAULTS.siteName}`,
-  description: `Explore all users on ${SITE_DEFAULTS.siteName}. View user details, profiles, and account information in one place.`,
-  keywords: `users, user profiles, user list, ${SITE_DEFAULTS.siteName}, account information`,
+  title: `Users | ${SITE_DEFAULTS.title}`,
+  description: `Explore all users on ${SITE_DEFAULTS.title}. View user details, profiles, and account information in one place.`,
+  keywords: `users, user profiles, user list, ${SITE_DEFAULTS.title}, account information`,
   url: SITE_DEFAULTS.url + "/dashboard/users",
-  image: SITE_DEFAULTS.siteLogo,
+  image: SITE_DEFAULTS.logo,
 });
 
 export default async function Users({

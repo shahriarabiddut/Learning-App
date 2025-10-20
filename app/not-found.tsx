@@ -6,7 +6,7 @@ import { generateMetadata } from "@/lib/seo/generateMetadata";
 export const metadata = generateMetadata({
   title: `404 - Page Not Found `,
   url: SITE_DEFAULTS.url,
-  image: SITE_DEFAULTS.siteLogo,
+  image: SITE_DEFAULTS.logo,
 });
 
 export default function NotFound() {

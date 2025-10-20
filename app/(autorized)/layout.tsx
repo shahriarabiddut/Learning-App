@@ -10,11 +10,11 @@ import type React from "react";
 
 // Dynamic Metadata generation for SEO
 export const metadata = generateMetadata({
-  title: `Dashboard | ${SITE_DEFAULTS.siteName}`,
-  description: `Access your simple dashboard on ${SITE_DEFAULTS.siteName} to view account details, manage your profile, and track basic activities easily.`,
-  keywords: `dashboard, user dashboard, account management, profile, ${SITE_DEFAULTS.siteName}`,
+  title: `Dashboard | ${SITE_DEFAULTS.title}`,
+  description: `Access your simple dashboard on ${SITE_DEFAULTS.title} to view account details, manage your profile, and track basic activities easily.`,
+  keywords: `dashboard, user dashboard, account management, profile, ${SITE_DEFAULTS.title}`,
   url: SITE_DEFAULTS.url + "/dashboard",
-  image: SITE_DEFAULTS.siteLogo,
+  image: SITE_DEFAULTS.logo,
 });
 
 export default async function DashboardLayout({
@@ -41,7 +41,7 @@ export default async function DashboardLayout({
           <footer className="border-t bg-muted/20">
             <div className="flex h-10 items-center justify-center">
               <span className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} {SITE_DEFAULTS.siteName}
+                © {new Date().getFullYear()} {SITE_DEFAULTS.title}
               </span>
             </div>
           </footer>

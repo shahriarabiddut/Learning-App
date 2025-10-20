@@ -7,7 +7,7 @@ import {
   SMTP_SECURE,
   SITE_NAME,
   SENDER_NAME,
-  SITE_EMAIL,
+  SENDER_EMAIL,
 } from "@/lib/constants/env";
 
 const transporter = nodemailer.createTransport({
@@ -101,7 +101,7 @@ export async function sendEmail(type: EmailType, options: EmailOptions) {
   }
 
   const mailOptions = {
-    from: `${SENDER_NAME} <${SITE_EMAIL}>`,
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     to: options.email,
     subject,
     html,

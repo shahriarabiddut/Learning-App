@@ -10,7 +10,7 @@ import {
   authClient,
   useSession,
 } from "@/lib/better-auth-client-and-actions/auth-client";
-import { SUPPORT_EMAIL } from "@/lib/constants/env";
+import { CONTACT_EMAIL } from "@/lib/constants/env";
 import { AlertCircle, FileWarningIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -56,10 +56,10 @@ export default function DisabledAccountPage() {
                   <p>
                     Contact our support team at{" "}
                     <a
-                      href={`{mailto:${SUPPORT_EMAIL}}`}
+                      href={`{mailto:${CONTACT_EMAIL}}`}
                       className="underline hover:text-yellow-600 dark:hover:text-yellow-400"
                     >
-                      {SUPPORT_EMAIL}
+                      {CONTACT_EMAIL}
                     </a>
                   </p>
                 </div>

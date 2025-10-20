@@ -24,9 +24,9 @@ export function DashboardXHeader() {
         </Button>
         <span
           className="hidden md:inline-block md:max-w-[200px] lg:max-w-full truncate"
-          title={SITE_DEFAULTS.siteName}
+          title={SITE_DEFAULTS.title}
         >
-          {SITE_DEFAULTS.siteName}
+          {SITE_DEFAULTS.title}
         </span>
       </Link>
       <div className="ml-auto flex items-center space-x-4">

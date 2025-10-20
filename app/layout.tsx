@@ -7,7 +7,7 @@ import { generateMetadata } from "@/lib/seo/generateMetadata";
 export const metadata = generateMetadata({
   title: "",
   url: SITE_DEFAULTS.url,
-  image: SITE_DEFAULTS.siteLogo,
+  image: SITE_DEFAULTS.logo,
 });
 
 export default function RootLayout({

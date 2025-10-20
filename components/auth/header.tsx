@@ -32,18 +32,18 @@ export default function Header({ title, label, link }: HeaderProps) {
         </Link>
       ) : (
         <>
-          {SITE_DEFAULTS.siteLogo !== "" && (
+          {SITE_DEFAULTS.logo !== "" && (
             <Image
-              src={SITE_DEFAULTS.siteLogo || ""}
+              src={SITE_DEFAULTS.logo || ""}
               alt="Logo"
               width={250}
               height={250}
               className="h-8 w-auto dark:bg-gray-50"
             />
           )}
-          {SITE_DEFAULTS.siteLogo === "" && (
+          {SITE_DEFAULTS.logo === "" && (
             <span className="font-bold text-xl text-foreground">
-              {SITE_DEFAULTS.siteName}
+              {SITE_DEFAULTS.title}
             </span>
           )}
         </>

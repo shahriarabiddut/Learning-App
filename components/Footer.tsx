@@ -1,4 +1,5 @@
-import { SITE_DEFAULTS } from "@/lib/constants/env";
+import { CONTACT_ADDRESS, SITE_DEFAULTS } from "@/lib/constants/env";
+import { formatAddress } from "@/lib/helper/clientHelper";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -53,9 +54,9 @@ export default function Footer() {
               href="/"
               className="flex items-center justify-center space-x-2 "
             >
-              {SITE_DEFAULTS.siteLogo ? (
+              {SITE_DEFAULTS.logo ? (
                 <Image
-                  src={SITE_DEFAULTS.siteLogo}
+                  src={SITE_DEFAULTS.logo}
                   alt="Logo"
                   width={75}
                   height={75}
@@ -64,7 +65,7 @@ export default function Footer() {
                 />
               ) : (
                 <span className="font-bold text-xl text-foreground">
-                  {SITE_DEFAULTS.siteName}
+                  {SITE_DEFAULTS.title}
                 </span>
               )}
             </Link>
@@ -102,9 +103,7 @@ export default function Footer() {
             )}
 
             <p className="text-gray-600 dark:text-gray-400">
-              {SITE_DEFAULTS.address1}
-              <br />
-              {SITE_DEFAULTS.address2}
+              {formatAddress(CONTACT_ADDRESS)}
             </p>
           </div>
         </div>
@@ -160,7 +159,7 @@ export default function Footer() {
           <p>
             © {new Date().getFullYear()}{" "}
             <span className="text-rose-600 font-semibold">
-              {SITE_DEFAULTS.siteName}
+              {SITE_DEFAULTS.title}
             </span>{" "}
             All rights reserved.
           </p>
