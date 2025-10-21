@@ -40,6 +40,13 @@ const formComponents = {
       })),
     { loading: FormLoadingSpinner, ssr: false }
   ),
+  category: dynamic(
+    () =>
+      import("@/components/categories/CategoryForm").then((mod) => ({
+        default: mod.CategoryForm,
+      })),
+    { loading: FormLoadingSpinner, ssr: false }
+  ),
 } as const;
 
 type FormType = keyof typeof formComponents;

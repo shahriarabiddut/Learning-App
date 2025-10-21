@@ -6,9 +6,13 @@ import themeReducer, {
 import userReducer, {
   loadInitialUserUIState,
 } from "@/lib/redux-features/user/userSlice";
+import categoryReducer, {
+  loadInitialCategoryUIState,
+} from "@/lib/redux-features/categories/categoriesSlice";
 // RTK Query API slice
 import { setupListeners } from "@reduxjs/toolkit/query";
 import { userApi } from "@/lib/redux-features/user/userApi";
+import { categoryApi } from "../redux-features/categories/categoriesApi";
 
 // Persist to localStorage middleware (throttled)
 const localStorageMiddleware = () => {
@@ -47,17 +51,21 @@ export const store = configureStore({
   reducer: {
     user: userReducer,
     [userApi.reducerPath]: userApi.reducer,
+    categories: categoryReducer,
+    [categoryApi.reducerPath]: categoryApi.reducer,
     ui: uiReducer,
     theme: themeReducer,
   },
   preloadedState: {
     theme: loadInitialThemeState(),
     user: loadInitialUserUIState(),
+    categories: loadInitialCategoryUIState(),
   },
   middleware: (getDefaultMiddleware) =>
     // add RTK Query middleware first (recommended), then your custom middlewares
     getDefaultMiddleware()
       .concat(userApi.middleware)
+      .concat(categoryApi.middleware)
       .concat(localStorageMiddleware()),
 });
 

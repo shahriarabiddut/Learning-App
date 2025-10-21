@@ -32,7 +32,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { ImageInput } from "@/components/shared/ImageInput";
+import { ImageInput } from "@/components/shared/Input/ImageInput";
 
 export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
   const [addUser, { isLoading: loading }] = useAddUserMutation();
@@ -48,8 +48,6 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
       name: "",
       email: "",
       role: "user",
-      store: "0",
-      storeType: "",
       userType: "user",
       password: "",
       isActive: false,
@@ -68,8 +66,6 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
           name: user.name || "",
           email: user.email || "",
           role: user.role || "user",
-          store: user.store || "0",
-          storeType: user.storeType || "",
           userType: user.userType || "user",
           password: "",
           isActive: user.isActive || false,
@@ -81,8 +77,6 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
           name: "",
           email: "",
           role: "user",
-          store: "0",
-          storeType: "",
           userType: "user",
           password: "",
           isActive: false,
