@@ -1,66 +1,95 @@
+import { Session } from "@/lib/better-auth/auth-types";
+import { loggedInInvalidRoutes } from "@/lib/constants/env";
+import {
+  addCorsHeaders,
+  handleOptionsRequest,
+  handleRateLimit,
+} from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
-import { loggedInInvalidRoutes } from "./lib/constants/env";
 
-function hasSessionCookie(req: NextRequest): boolean {
-  const sessionCookie = req.cookies.get("better-auth.session_token");
-  // Existence check
-  return !!sessionCookie?.value;
+async function getMiddlewareSession(req: NextRequest) {
+  const response = await fetch(`${req.nextUrl.origin}/api/auth/get-session`, {
+    headers: {
+      cookie: req.headers.get("cookie") || "",
+    },
+  });
+
+  if (!response.ok) {
+    console.error(`Failed to fetch session: ${response.status}`);
+    return null;
+  }
+
+  const data = await response.json();
+
+  // Check if data is wrapped in { data: session } or is the session directly
+  const session = data?.data ?? data;
+
+  return session as Session | null;
 }
 
 export default async function authMiddleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
-  // Skip middleware for static files and most API routes
+
+  // Handle OPTIONS requests first
+  if (req.method === "OPTIONS") {
+    return handleOptionsRequest();
+  }
+
+  // Apply rate limiting to API routes (except auth)
+  const rateLimitResponse = await handleRateLimit(req);
+  if (rateLimitResponse) {
+    return addCorsHeaders(rateLimitResponse);
+  }
+
+  // Skip auth checks for API routes, static files, etc.
   if (
-    pathname.startsWith("/_next") ||
     (pathname.startsWith("/api") && !pathname.startsWith("/api/auth")) ||
-    pathname.includes("/favicon") ||
-    pathname.includes("/static") ||
-    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname.includes(".")
   ) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    return addCorsHeaders(response);
   }
 
-  // Quick cookie check
-  const hasSession = hasSessionCookie(req);
+  // Only check session for protected routes
+  const session = await getMiddlewareSession(req);
+  const url = req.url;
 
-  // Handle logged-in users trying to access auth pages
   if (loggedInInvalidRoutes.some((route) => pathname.startsWith(route))) {
-    if (hasSession) {
-      const redirectUrl = new URL("/dashboard", req.url);
-      // Preserve search params
-      redirectUrl.search = req.nextUrl.search;
-      return NextResponse.redirect(redirectUrl);
+    if (session) {
+      const response = NextResponse.redirect(new URL("/dashboard", url));
+      return addCorsHeaders(response);
     }
-    return NextResponse.next();
+    const response = NextResponse.next();
+    return addCorsHeaders(response);
   }
 
-  // Handle protected routes
-  const protectedPrefixes = ["/dashboard", "/admin"];
-  const isProtected = protectedPrefixes.some((prefix) =>
-    pathname.startsWith(prefix)
-  );
-
-  if (isProtected) {
-    if (!hasSession) {
-      const signInUrl = new URL("/sign-in", req.url);
-      // Store intended destination for post-login redirect
-      signInUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(signInUrl);
+  if (pathname.startsWith("/dashboard")) {
+    if (!session) {
+      const response = NextResponse.redirect(new URL("/sign-in", url));
+      return addCorsHeaders(response);
     }
-    return NextResponse.next();
+    const response = NextResponse.next();
+    return addCorsHeaders(response);
   }
 
-  // All other routes - allow access
-  return NextResponse.next();
+  // For all other routes, add CORS headers and continue
+  const response = NextResponse.next();
+  return addCorsHeaders(response);
 }
 
 export const config = {
   matcher: [
+    "/dashboard",
+    "/dashboard/:path*",
     "/sign-in",
     "/sign-up",
-    "/forgot-password",
-    "/reset-password",
-    "/dashboard/:path*",
+    "/forget-password",
     "/verify-email",
+    // API routes (for rate limiting, excluding auth)
+    "/api/((?!auth).*)",
+    // OR regex for advanced matching:
+    "/((?!api|trpc|_next/static|_next/image|favicon.ico).*)",
   ],
 };
