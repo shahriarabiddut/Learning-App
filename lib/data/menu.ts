@@ -1,5 +1,5 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
-import { FaThLarge, FaUsers } from "react-icons/fa";
+import { FaPlus, FaThLarge, FaUsers } from "react-icons/fa";
 
 export const NAV_LINKS = [
   {
@@ -13,10 +13,20 @@ export const NAV_LINKS = [
     permission: PERMISSIONS.MANAGE_USERS,
     children: [
       {
+        id: "users",
         name: "All Users",
         href: "/dashboard/users",
         icon: FaUsers,
         permission: PERMISSIONS.MANAGE_USERS,
+      },
+      {
+        id: "add-user",
+        name: "Add New User",
+        icon: FaPlus,
+        href: "/dashboard/users/create",
+        permission: PERMISSIONS.MANAGE_USERS,
+        action: true,
+        form: "user",
       },
     ],
   },

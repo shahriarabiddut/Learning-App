@@ -1,44 +1,66 @@
-import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
-import { Session } from "@/lib/better-auth/auth-types";
 import { loggedInInvalidRoutes } from "./lib/constants/env";
 
-async function getMiddlewareSession(req: NextRequest) {
-  const { data: session } = await axios.get<Session>("/api/auth/get-session", {
-    baseURL: req.nextUrl.origin,
-    headers: {
-      //get the cookie from the request
-      cookie: req.headers.get("cookie") || "",
-    },
-  });
-
-  return session;
+function hasSessionCookie(req: NextRequest): boolean {
+  const sessionCookie = req.cookies.get("better-auth.session_token");
+  // Existence check
+  return !!sessionCookie?.value;
 }
 
 export default async function authMiddleware(req: NextRequest) {
-  const session = await getMiddlewareSession(req);
-  const url = req.url;
   const pathname = req.nextUrl.pathname;
+  // Skip middleware for static files and most API routes
+  if (
+    pathname.startsWith("/_next") ||
+    (pathname.startsWith("/api") && !pathname.startsWith("/api/auth")) ||
+    pathname.includes("/favicon") ||
+    pathname.includes("/static") ||
+    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)
+  ) {
+    return NextResponse.next();
+  }
 
+  // Quick cookie check
+  const hasSession = hasSessionCookie(req);
+
+  // Handle logged-in users trying to access auth pages
   if (loggedInInvalidRoutes.some((route) => pathname.startsWith(route))) {
-    if (session) {
-      return NextResponse.redirect(new URL("/dashboard", url));
+    if (hasSession) {
+      const redirectUrl = new URL("/dashboard", req.url);
+      // Preserve search params
+      redirectUrl.search = req.nextUrl.search;
+      return NextResponse.redirect(redirectUrl);
     }
     return NextResponse.next();
   }
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin")) {
-    if (!session) {
-      return NextResponse.redirect(new URL("/sign-in", url));
+
+  // Handle protected routes
+  const protectedPrefixes = ["/dashboard", "/admin"];
+  const isProtected = protectedPrefixes.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+
+  if (isProtected) {
+    if (!hasSession) {
+      const signInUrl = new URL("/sign-in", req.url);
+      // Store intended destination for post-login redirect
+      signInUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(signInUrl);
     }
     return NextResponse.next();
   }
+
+  // All other routes - allow access
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/dashboard",
+    "/sign-in",
+    "/sign-up",
+    "/forgot-password",
+    "/reset-password",
     "/dashboard/:path*",
-    // OR regex for advanced matching:
-    "/((?!api|trpc|_next/static|_next/image|favicon.ico).*)",
+    "/verify-email",
   ],
 };

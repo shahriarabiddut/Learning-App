@@ -35,9 +35,11 @@ export async function GET(request: NextRequest) {
     if (usertype) {
       query.userType = usertype;
     }
-    if (user.role === "admin" && !superAdmin) {
+    if (user.role !== "admin") {
       query.role = { $ne: "admin" };
-      query.userType = "user";
+    }
+    if (!superAdmin) {
+      query.userType = { $ne: "superadmin" };
     }
     // Add search functionality
     if (search) {
