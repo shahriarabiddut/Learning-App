@@ -1,5 +1,5 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
-import { Building } from "lucide-react";
+import { Building, File, FilePlus, Files } from "lucide-react";
 import { FaPlus, FaThLarge, FaUsers } from "react-icons/fa";
 import { FaBuildingFlag } from "react-icons/fa6";
 
@@ -52,6 +52,29 @@ export const NAV_LINKS = [
         permission: PERMISSIONS.MANAGE_CATEGORIES,
         action: true,
         form: "category",
+      },
+    ],
+  },
+  {
+    name: "Posts",
+    icon: File,
+    permission: [PERMISSIONS.MANAGE_POSTS, PERMISSIONS.VIEW_POSTS],
+    children: [
+      {
+        id: "posts",
+        name: "All Posts",
+        href: "/dashboard/posts",
+        icon: Files,
+        permission: PERMISSIONS.VIEW_POSTS,
+      },
+      {
+        id: "add-post",
+        name: "Add New Post",
+        icon: FilePlus,
+        href: "/dashboard/posts/create",
+        permission: PERMISSIONS.MANAGE_POSTS,
+        action: true,
+        form: "post",
       },
     ],
   },

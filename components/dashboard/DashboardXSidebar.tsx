@@ -47,6 +47,13 @@ const formComponents = {
       })),
     { loading: FormLoadingSpinner, ssr: false }
   ),
+  post: dynamic(
+    () =>
+      import("@/components/blogpost/BlogPostForm").then((mod) => ({
+        default: mod.BlogPostForm,
+      })),
+    { loading: FormLoadingSpinner, ssr: false }
+  ),
 } as const;
 
 type FormType = keyof typeof formComponents;
