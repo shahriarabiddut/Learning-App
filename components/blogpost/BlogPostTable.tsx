@@ -15,10 +15,11 @@ import { FaBan, FaCheckCircle } from "react-icons/fa";
 import { FaStar, FaStarHalfStroke } from "react-icons/fa6";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BlogPostActions } from "./BlogPostActions";
-import { Building } from "lucide-react";
+import { Calendar, Clock, Eye, FileText, User } from "lucide-react";
+import Image from "next/image";
 
 interface BlogPostTableProps {
-  blogpost: IBlogPost[];
+  blogposts: IBlogPost[];
   handleViewClick: (blogpost: IBlogPost) => void;
   handleEditClick: (blogpost: IBlogPost) => void;
   handleDeleteClick: (id: string) => void;
@@ -30,7 +31,7 @@ interface BlogPostTableProps {
 }
 
 export const BlogPostTable = ({
-  blogpost,
+  blogposts,
   handleViewClick,
   handleEditClick,
   handleDeleteClick,
@@ -40,12 +41,12 @@ export const BlogPostTable = ({
   handleBulkStatusToggle,
   handleFeaturedStatusToggle,
 }: BlogPostTableProps) => {
-  const [selectedBlogPost, setSelectedBlogPost] = useState<string[]>([]);
+  const [selectedBlogPosts, setSelectedBlogPosts] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
 
-  // Toggle selection for a single blogpost
-  const toggleBlogPostelection = (blogpostId: string) => {
-    setSelectedBlogPost((prev) =>
+  // Toggle selection for a single blog post
+  const toggleBlogPostSelection = (blogpostId: string) => {
+    setSelectedBlogPosts((prev) =>
       prev.includes(blogpostId)
         ? prev.filter((id) => id !== blogpostId)
         : [...prev, blogpostId]
@@ -54,10 +55,10 @@ export const BlogPostTable = ({
 
   // Toggle select all on current page
   const toggleSelectAll = () => {
-    if (selectedBlogPost.length === blogpost.length) {
-      setSelectedBlogPost([]);
+    if (selectedBlogPosts.length === blogposts.length) {
+      setSelectedBlogPosts([]);
     } else {
-      setSelectedBlogPost(blogpost.map((blogpost) => blogpost?.id));
+      setSelectedBlogPosts(blogposts.map((blogpost) => blogpost?.id));
     }
   };
 
@@ -77,58 +78,88 @@ export const BlogPostTable = ({
       const start = Math.min(index, lastCheckedIndex);
       const end = Math.max(index, lastCheckedIndex);
 
-      const range = blogpost
+      const range = blogposts
         .slice(start, end + 1)
         .map((blogpost) => blogpost.id)
-        .filter((id): id is string => !!id); // Filter out undefined ids
+        .filter((id): id is string => !!id);
 
-      setSelectedBlogPost((prev) => {
-        // Determine if we should add or remove based on the last clicked checkbox
-        const shouldAdd = !prev.includes(blogpost[lastCheckedIndex].id);
+      setSelectedBlogPosts((prev) => {
+        const shouldAdd = !prev.includes(blogposts[lastCheckedIndex].id);
 
         if (shouldAdd) {
-          // Add all in range that aren't already selected
           const newSelections = new Set(prev);
           range.forEach((id) => newSelections.add(id));
           return Array.from(newSelections);
         } else {
-          // Remove all in range that are selected
           return prev.filter((id) => !range.includes(id));
         }
       });
     } else {
-      toggleBlogPostelection(blogpostId);
+      toggleBlogPostSelection(blogpostId);
       setLastCheckedIndex(index);
     }
   };
 
   // Handle bulk delete
   const handleBulkDeleteClick = () => {
-    if (selectedBlogPost.length === 0) return;
-    handleBulkDelete(selectedBlogPost);
-    setSelectedBlogPost([]);
+    if (selectedBlogPosts.length === 0) return;
+    handleBulkDelete(selectedBlogPosts);
+    setSelectedBlogPosts([]);
   };
 
   // Handle bulk status toggle
   const handleBulkStatusToggleClick = (targetStatus: boolean) => {
-    // Handle bulk status toggle
-    handleBulkStatusToggle(selectedBlogPost, targetStatus);
+    handleBulkStatusToggle(selectedBlogPosts, targetStatus);
   };
+
   // Handle Featured Click
   const handleFeaturedClick = (targetStatus: boolean) => {
-    handleFeaturedStatusToggle(selectedBlogPost, targetStatus);
+    handleFeaturedStatusToggle(selectedBlogPosts, targetStatus);
+  };
+
+  // Format date
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return "N/A";
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { className: string; label: string }> = {
+      published: {
+        className:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+        label: "Published",
+      },
+      draft: {
+        className:
+          "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+        label: "Draft",
+      },
+      archived: {
+        className:
+          "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+        label: "Archived",
+      },
+    };
+
+    return variants[status] || variants.draft;
   };
 
   return (
     <>
-      {selectedBlogPost.length > 0 && (
-        <div className="flex items-center gap-2 mb-4 bg-gray-100 rounded-md px-4 py-3">
+      {selectedBlogPosts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3">
           <span className="text-sm font-medium">
-            {selectedBlogPost.length} selected
+            {selectedBlogPosts.length} selected
           </span>
 
           <Button variant="outline" size="sm" onClick={toggleSelectAll}>
-            {selectedBlogPost.length === blogpost.length
+            {selectedBlogPosts.length === blogposts.length
               ? "Deselect all"
               : "Select all"}
           </Button>
@@ -145,7 +176,7 @@ export const BlogPostTable = ({
             variant="secondary"
             size="sm"
             onClick={() => handleBulkStatusToggleClick(false)}
-            className="bg-gray-900 text-white hover:bg-red-500 gap-1"
+            className="bg-gray-900 text-white hover:bg-red-500 gap-1 dark:bg-red-900 dark:hover:bg-red-700"
           >
             <FaBan className="h-3 w-3" />
             Deactivate
@@ -155,21 +186,23 @@ export const BlogPostTable = ({
             variant="outline"
             size="sm"
             onClick={() => handleBulkStatusToggleClick(true)}
-            className="bg-green-200 text-green-800 hover:bg-green-400 hover:text-white gap-1"
+            className="bg-green-200 text-green-800 hover:bg-green-400 hover:text-white gap-1 dark:bg-green-900 dark:text-green-100 dark:hover:bg-green-700"
           >
             <FaCheckCircle className="h-4 w-4" />
             Activate
           </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleFeaturedClick(true)}
             className="bg-orange-200 text-orange-800 hover:bg-orange-400 hover:text-white gap-1 dark:bg-orange-900 dark:text-orange-100 dark:hover:bg-orange-700"
-            disabled={selectedBlogPost.length > 8}
+            disabled={selectedBlogPosts.length > 8}
           >
             <FaStar className="h-4 w-4" />
             Add to Featured
           </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -181,110 +214,179 @@ export const BlogPostTable = ({
           </Button>
         </div>
       )}
+
       <div className="rounded-md border">
         <Table className="overflow-hidden">
           <TableHeader>
             <TableRow>
-              <TableHead>
+              <TableHead className="w-[50%]">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     checked={
-                      blogpost.length > 0 &&
-                      selectedBlogPost.length === blogpost.length
+                      blogposts.length > 0 &&
+                      selectedBlogPosts.length === blogposts.length
                     }
                     onCheckedChange={toggleSelectAll}
                     className="mr-2"
                   />
-                  Title
+                  Post Details
                 </div>
               </TableHead>
-              <TableHead className="hidden lg:table-cell">Parent</TableHead>
+              <TableHead className="hidden md:table-cell">Author</TableHead>
+              <TableHead className="hidden lg:table-cell">Stats</TableHead>
+              <TableHead className="hidden xl:table-cell">Published</TableHead>
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {blogpost.map((blogpost, index) => (
-              <TableRow key={blogpost.id} className="hover:bg-muted/30">
-                {/* Details column with image, name, parent (mobile view) */}
-                <TableCell className="py-3">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={selectedBlogPost.includes(blogpost.id)}
-                      onCheckedChange={(checked) =>
-                        handleCheckboxChange(checked, index, blogpost.id)
-                      }
-                      className="mr-1"
-                    />
-                    <div className="flex-shrink-0 w-8 h-8 rounded-xl border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
-                      {blogpost.imageUrl ? (
-                        <img
-                          src={blogpost.imageUrl}
-                          alt={blogpost.name}
-                          className="w-full h-full rounded-lg object-cover"
-                        />
-                      ) : (
-                        <span className="text-2xl text-gray-500">
-                          {blogpost?.name?.charAt(0)}
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className="grid gap-1 cursor-pointer wrap-break-word w-16 md:w-auto"
-                      onClick={() => handleViewClick(blogpost)}
-                    >
-                      <div className="font-semibold flex items-center gap-2">
-                        {blogpost.featured && (
-                          <Badge
-                            variant="outline"
-                            className="bg-white/70 text-yellow-500 border-yellow-400 px-1 py-0.5"
-                          >
-                            <FaStar
-                              title="Featured"
-                              className="text-yellow-400"
-                            />
-                          </Badge>
+            {blogposts.map((blogpost, index) => {
+              const statusInfo = getStatusBadge(blogpost.status || "draft");
+
+              return (
+                <TableRow key={blogpost.id} className="hover:bg-muted/30">
+                  {/* Post Details Column */}
+                  <TableCell className="py-3">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedBlogPosts.includes(blogpost.id)}
+                        onCheckedChange={(checked) =>
+                          handleCheckboxChange(checked, index, blogpost.id)
+                        }
+                        className="mr-1 mt-1"
+                      />
+
+                      {/* Thumbnail */}
+                      <div className="flex-shrink-0 w-16 h-16 rounded-lg border-2 border-border bg-muted overflow-hidden relative">
+                        {blogpost.featuredImage ? (
+                          <Image
+                            src={blogpost.featuredImage}
+                            alt={blogpost.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
+                            <FileText className="w-6 h-6 text-purple-400" />
+                          </div>
                         )}
-                        {blogpost.name}
                       </div>
 
-                      {/* Mobile view condensed info */}
-                      <div className="lg:hidden flex flex-wrap items-center gap-2 text-sm mt-1">
-                        <div className="flex items-center gap-1">
-                          <Building className="h-4 w-4" />
-                          {blogpost.parent || "None"}
+                      {/* Title and Meta */}
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => handleViewClick(blogpost)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          {blogpost.isFeatured && (
+                            <Badge
+                              variant="outline"
+                              className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 px-1 py-0"
+                            >
+                              <FaStar className="w-3 h-3" />
+                            </Badge>
+                          )}
+                          <Badge className={statusInfo.className}>
+                            {statusInfo.label}
+                          </Badge>
+                          {blogpost.categories &&
+                            blogpost.categories.length > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {typeof blogpost.categories[0] === "string"
+                                  ? blogpost.categories[0]
+                                  : blogpost.categories[0]?.name ||
+                                    "Uncategorized"}
+                              </Badge>
+                            )}
+                        </div>
+                        <h3 className="font-semibold text-foreground line-clamp-1 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                          {blogpost.title}
+                        </h3>
+                        {blogpost.excerpt && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                            {blogpost.excerpt}
+                          </p>
+                        )}
+
+                        {/* Mobile view condensed info */}
+                        <div className="md:hidden flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-2">
+                          {blogpost.authorName && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {blogpost.authorName}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {blogpost.views || 0}
+                          </div>
+                          {blogpost.readingTime && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {blogpost.readingTime}m
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
-                </TableCell>
+                  </TableCell>
 
-                {/* Parent BlogPost - Visible on medium screens */}
-                <TableCell className="hidden lg:table-cell py-3 capitalize">
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">
-                      {blogpost.parent || "None"}
-                    </span>
-                  </div>
-                </TableCell>
+                  {/* Author Column - Hidden on mobile */}
+                  <TableCell className="hidden md:table-cell py-3">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {blogpost.authorName || "Unknown"}
+                      </span>
+                    </div>
+                  </TableCell>
 
-                {/* Actions */}
-                <TableCell className="py-3 max-w-32 text-center">
-                  <BlogPostActions
-                    blogpost={blogpost}
-                    onEdit={() => handleEditClick(blogpost)}
-                    onView={() => handleViewClick(blogpost)}
-                    onDelete={() => handleDeleteClick(blogpost.id)}
-                    onDuplicate={() => handleDuplicateClick(blogpost)}
-                    showtoggleButtons={false}
-                    onToggleStatus={() =>
-                      handleToggleStatusClick(blogpost.id, blogpost.isActive)
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+                  {/* Stats Column - Hidden on medium and below */}
+                  <TableCell className="hidden lg:table-cell py-3">
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Eye className="h-3 w-3" />
+                        <span>{blogpost.views || 0} views</span>
+                      </div>
+                      {blogpost.readingTime && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{blogpost.readingTime} min</span>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+
+                  {/* Published Date Column - Hidden on large and below */}
+                  <TableCell className="hidden xl:table-cell py-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {formatDate(blogpost.publishedAt || blogpost.createdAt)}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell className="py-3 text-center">
+                    <BlogPostActions
+                      blogpost={blogpost}
+                      onEdit={() => handleEditClick(blogpost)}
+                      onView={() => handleViewClick(blogpost)}
+                      onDelete={() => handleDeleteClick(blogpost.id)}
+                      onDuplicate={() => handleDuplicateClick(blogpost)}
+                      showtoggleButtons={false}
+                      onToggleStatus={() =>
+                        handleToggleStatusClick(
+                          blogpost.id,
+                          blogpost.isActive || false
+                        )
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

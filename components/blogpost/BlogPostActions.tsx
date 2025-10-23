@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/shared/Actions";
+import { Badge } from "@/components/ui/badge";
 import { IBlogPost } from "@/models/blogPost.model";
 
 interface BlogPostActionsProps {
@@ -29,22 +30,46 @@ export const BlogPostActions = ({
       } items-center`}
     >
       <div className="flex gap-1 md:gap-2">
-        <ActionButton action="view" onClick={onView} title="View Blogpost" />
-        <ActionButton action="edit" onClick={onEdit} title="Edit Blogpost" />
+        <ActionButton action="view" onClick={onView} title="View Blog Post" />
+        <ActionButton action="edit" onClick={onEdit} title="Edit Blog Post" />
         <ActionButton
           action="delete"
           onClick={onDelete}
-          title="Delete Blogpost"
+          title="Delete Blog Post"
         />
-        <ActionButton
+        {/* <ActionButton
           action="duplicate"
           onClick={onDuplicate}
-          title="Duplicate Blogpost"
+          title="Duplicate Blog Post"
           isLoading={isLoading}
-        />
+        /> */}
       </div>
 
-      {/* ToggleStatus */}
+      {/* Toggle Status Badge */}
+      {/* {showtoggleButtons && (
+        <div
+          className="cursor-pointer"
+          onClick={() =>
+            onToggleStatus(blogpost.id, blogpost.isActive || false)
+          }
+        >
+          {blogpost.isActive ? (
+            <Badge
+              variant="secondaryGreen"
+              className="hover:bg-green-600 transition-colors"
+            >
+              Active
+            </Badge>
+          ) : (
+            <Badge
+              variant="default"
+              className="hover:bg-gray-600 transition-colors"
+            >
+              Inactive
+            </Badge>
+          )}
+        </div>
+      )} */}
     </div>
   );
 };

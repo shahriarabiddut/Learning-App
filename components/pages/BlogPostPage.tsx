@@ -20,24 +20,24 @@ import {
 } from "@/components/shared/Loader/SkeletonLoader";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 import {
-  useAddCategoryMutation,
-  useBulkDeleteCategoriesMutation,
-  useBulkToggleCategoryPropertyMutation,
-  useFetchCategoriesQuery,
-  useLazyGetCategoryByIdQuery,
-} from "@/lib/redux-features/categories/categoriesApi";
+  useAddBlogPostMutation,
+  useBulkDeleteBlogPostsMutation,
+  useBulkToggleBlogPostPropertyMutation,
+  useFetchBlogPostsQuery,
+  useLazyGetBlogPostByIdQuery,
+} from "@/lib/redux-features/blogPost/blogPostApi";
 import {
-  loadInitialCategoryUIState,
-  selectCanManageCategories,
+  loadInitialBlogPostUIState,
+  selectCanManagePosts,
   setCurrentPage,
   setSearchQuery,
   setSortBy,
   setViewMode,
   updateUserPermissions,
-} from "@/lib/redux-features/categories/categoriesSlice";
+} from "@/lib/redux-features/blogPost/blogPostSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
-import { ICategory } from "@/models/categories.model";
-import { Building } from "lucide-react";
+import { IBlogPost } from "@/models/blogPost.model";
+import { FileText } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   memo,
@@ -61,12 +61,12 @@ const useIsClient = () => {
 };
 
 // Optimized dynamic imports with better error handling
-const CategoryForm = dynamic(
+const BlogPostForm = dynamic(
   () =>
-    import("@/components/categories/CategoryForm")
-      .then((m) => ({ default: m.CategoryForm }))
+    import("@/components/blogpost/BlogPostForm")
+      .then((m) => ({ default: m.BlogPostForm }))
       .catch((error) => {
-        toast.error("Failed to load CategoryForm!");
+        toast.error("Failed to load Blog Post Form!");
         return { default: () => <div>Failed to load form</div> };
       }),
   {
@@ -77,36 +77,36 @@ const CategoryForm = dynamic(
   }
 );
 
-const CategoryGrid = dynamic(
+const BlogPostGrid = dynamic(
   () =>
-    import("@/components/categories/CategoryGrid")
-      .then((m) => ({ default: m.CategoryGrid }))
+    import("@/components/blogpost/BlogPostGrid")
+      .then((m) => ({ default: m.BlogPostGrid }))
       .catch(() => ({
-        default: () => <GridSkeletonLoader cols={3} lgcols={4} items={12} />,
+        default: () => <GridSkeletonLoader cols={2} lgcols={3} items={12} />,
       })),
   {
-    loading: () => <GridSkeletonLoader cols={3} lgcols={4} items={12} />,
+    loading: () => <GridSkeletonLoader cols={2} lgcols={3} items={12} />,
     ssr: false,
   }
 );
 
-const CategoryTable = dynamic(
+const BlogPostTable = dynamic(
   () =>
-    import("@/components/categories/CategoryTable")
-      .then((m) => ({ default: m.CategoryTable }))
+    import("@/components/blogpost/BlogPostTable")
+      .then((m) => ({ default: m.BlogPostTable }))
       .catch(() => ({
-        default: () => <TableSkeletonLoader cols={3} rows={9} />,
+        default: () => <TableSkeletonLoader cols={5} rows={9} />,
       })),
   {
-    loading: () => <TableSkeletonLoader cols={3} rows={9} />,
+    loading: () => <TableSkeletonLoader cols={5} rows={9} />,
     ssr: false,
   }
 );
 
-const CategoryModal = dynamic(
+const BlogPostModal = dynamic(
   () =>
-    import("@/components/categories/CategoryModals")
-      .then((m) => ({ default: m.CategoryModal }))
+    import("@/components/blogpost/BlogPostModals")
+      .then((m) => ({ default: m.BlogPostModal }))
       .catch(() => ({ default: () => null })),
   {
     loading: () => null,
@@ -114,8 +114,8 @@ const CategoryModal = dynamic(
   }
 );
 
-const CategoryPagination = dynamic(
-  () => import("@/components/categories/CategoryPagination"),
+const BlogPostPagination = dynamic(
+  () => import("@/components/blogpost/BlogPostPagination"),
   {
     loading: () => (
       <div className="h-10 w-full bg-muted/50 animate-pulse rounded flex items-center justify-center">
@@ -126,10 +126,10 @@ const CategoryPagination = dynamic(
   }
 );
 
-const CategoryViewToggle = dynamic(
+const BlogPostViewToggle = dynamic(
   () =>
-    import("@/components/categories/CategoryViewToggle").then((m) => ({
-      default: m.CategoryViewToggle,
+    import("@/components/blogpost/BlogPostViewToggle").then((m) => ({
+      default: m.BlogPostViewToggle,
     })),
   {
     loading: () => (
@@ -140,14 +140,14 @@ const CategoryViewToggle = dynamic(
 );
 
 // Memoized header component
-const CategoriesHeader = memo(
+const BlogPostsHeader = memo(
   ({
     searchQuery,
     onSearch,
     dispatch,
     sortBy,
     viewMode,
-    canManageCategories,
+    canManagePosts,
     onAddNew,
     loading,
     refetch,
@@ -157,101 +157,112 @@ const CategoriesHeader = memo(
     dispatch: any;
     sortBy: any;
     viewMode: any;
-    canManageCategories: boolean;
+    canManagePosts: boolean;
     onAddNew: () => void;
     loading: boolean;
     refetch: () => void;
   }) => (
     <PageHeader
-      title="Categories"
+      title="Blog Posts"
       searchQuery={searchQuery}
       onSearch={onSearch}
       loading={loading}
-      canAdd={canManageCategories}
+      canAdd={canManagePosts}
       onAddNew={onAddNew}
-      ViewToggleComponent={CategoryViewToggle}
+      ViewToggleComponent={BlogPostViewToggle}
       viewToggleProps={{ dispatch, sortBy, viewMode }}
       refetch={refetch}
     />
   )
 );
 
-CategoriesHeader.displayName = "CategoriesHeader";
+BlogPostsHeader.displayName = "BlogPostsHeader";
 
 // Memoized content view component
-const CategoryContentView = memo(
+const BlogPostContentView = memo(
   ({
     viewMode,
-    categories,
+    posts,
     handlers,
     totalPages,
   }: {
     viewMode: string;
-    categories: any[];
+    posts: any[];
     handlers: any;
     totalPages: number;
   }) => (
     <EntityContentView
       viewMode={viewMode as "grid" | "table"}
-      entities={categories}
-      GridComponent={CategoryGrid}
-      TableComponent={CategoryTable}
-      PaginationComponent={CategoryPagination}
+      entities={posts}
+      GridComponent={BlogPostGrid}
+      TableComponent={BlogPostTable}
+      PaginationComponent={BlogPostPagination}
       handlers={handlers}
-      entityKey="categories"
+      entityKey="blogposts"
       totalPages={totalPages}
-      gridCols={3}
-      gridLgCols={4}
+      gridCols={2}
+      gridLgCols={3}
       gridItems={12}
-      tableCols={3}
+      tableCols={5}
       tableRows={9}
       permissions={{ canManage: true, canView: true }}
     />
   )
 );
 
-CategoryContentView.displayName = "CategoryContentView";
+BlogPostContentView.displayName = "BlogPostContentView";
 
 // Main content component
-const CategoriesContent = memo(() => {
+const BlogPostsContent = memo(() => {
   const dispatch = useAppDispatch();
   const isClient = useIsClient();
 
   // UI state from Redux
-  const { viewMode, searchQuery, sortBy, currentPage, itemsPerPage } =
-    useAppSelector((state) => state.categories);
-
-  // RTK Query hook for fetching categories
   const {
-    data: categoriesData,
+    viewMode,
+    searchQuery,
+    sortBy,
+    currentPage,
+    itemsPerPage,
+    filterStatus,
+    filterAuthor,
+    filterCategory,
+    filterTags,
+    showFeaturedOnly,
+  } = useAppSelector((state) => state.blogPosts);
+
+  // RTK Query hook for fetching posts
+  const {
+    data: postsData,
     isLoading,
     isFetching,
     error,
     isError,
     refetch,
-  } = useFetchCategoriesQuery({
+  } = useFetchBlogPostsQuery({
     page: currentPage,
     limit: itemsPerPage,
     search: searchQuery,
     sortBy,
+    status: filterStatus !== "all" ? filterStatus : undefined,
+    author: filterAuthor || undefined,
+    category: filterCategory || undefined,
+    tags: filterTags.length > 0 ? filterTags : undefined,
+    isFeatured: showFeaturedOnly ? true : undefined,
   });
-  // console.log(isLoading, isFetching, error, isError);
-  // RTK Query mutations
-  const [addCategory] = useAddCategoryMutation();
-  const [bulkDelete] = useBulkDeleteCategoriesMutation();
-  const [bulkToggle] = useBulkToggleCategoryPropertyMutation();
-  const [triggerGetCategory] = useLazyGetCategoryByIdQuery();
 
-  // Local state - Initialize with consistent values
+  // RTK Query mutations
+  const [addBlogPost] = useAddBlogPostMutation();
+  const [bulkDelete] = useBulkDeleteBlogPostsMutation();
+  const [bulkToggle] = useBulkToggleBlogPostPropertyMutation();
+  const [triggerGetPost] = useLazyGetBlogPostByIdQuery();
+
+  // Local state
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<ICategory | null>(
-    null
-  );
-  const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(
-    null
-  );
+  const [editingPost, setEditingPost] = useState<IBlogPost | null>(null);
+  const [selectedPost, setSelectedPost] = useState<IBlogPost | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
   const { data: session } = useSession();
@@ -268,44 +279,39 @@ const CategoriesContent = memo(() => {
   }, [session?.user?.role, dispatch]);
 
   // Memoized values
-  const canManageCategories = useAppSelector(selectCanManageCategories);
+  const canManagePosts = useAppSelector(selectCanManagePosts);
 
-  const categories = useMemo(
-    () => categoriesData?.data || [],
-    [categoriesData?.data]
-  );
+  const posts = useMemo(() => postsData?.data || [], [postsData?.data]);
   const totalPages = useMemo(
-    () => categoriesData?.totalPages || 0,
-    [categoriesData?.totalPages]
+    () => postsData?.totalPages || 0,
+    [postsData?.totalPages]
   );
 
-  // Initialize component with UI state from localStorage - only on client
+  // Initialize component with UI state from localStorage
   useEffect(() => {
     if (!isClient) return;
 
     const initializeComponent = () => {
       try {
-        const initialUIState = loadInitialCategoryUIState();
+        const initialUIState = loadInitialBlogPostUIState();
         dispatch(setViewMode(initialUIState.viewMode));
         dispatch(setCurrentPage(initialUIState.currentPage));
         dispatch(setSortBy(initialUIState.sortBy));
       } catch (error) {
-        // Don't show toast during initialization to prevent hydration issues
         if (isClient) {
-          toast.error("Failed to initialize categories page");
+          toast.error("Failed to initialize blog posts page");
         }
       }
     };
 
-    // Use a small delay to ensure client-side initialization
     const timeoutId = setTimeout(initializeComponent, 0);
     return () => clearTimeout(timeoutId);
   }, [dispatch, isClient]);
 
   const handleView = useHandleView({
-    fetchDetail: triggerGetCategory,
+    fetchDetail: triggerGetPost,
     setSelectedItem: (item) => {
-      setSelectedCategory(item);
+      setSelectedPost(item);
     },
     setViewModalOpen: (open) => {
       if (open) {
@@ -314,46 +320,59 @@ const CategoriesContent = memo(() => {
     },
     toast,
     isClient,
-    errorMessage: "Failed to load Category details",
+    errorMessage: "Failed to load post details",
   });
+
   const handleEdit = useHandleEdit({
-    setEditingItem: setEditingCategory,
+    setEditingItem: setEditingPost,
     setIsFormOpen,
   });
+
   const handleDelete = useHandleDelete({
-    setItemToDelete: setCategoryToDelete,
+    setItemToDelete: setPostToDelete,
     setDeleteDialogOpen,
   });
+
   // Cleanup effect for when form opens
   useEffect(() => {
     if (isFormOpen) {
-      // Clear any selected item when form opens to prevent confusion
-      setSelectedCategory(null);
+      setSelectedPost(null);
     }
   }, [isFormOpen]);
-  // Memoized event handlers with RTK Query mutations
+
+  // Memoized event handlers
   const handlers = useMemo(() => {
     const handleToggleStatus = async (id: string, current: boolean) => {
-      await handleBulkToggle([id], !current);
+      await handleBulkToggle([id], "isActive", !current);
     };
 
-    const handleDuplicate = async (category: ICategory) => {
+    const handleDuplicate = async (post: IBlogPost) => {
       const payload = {
-        name: `${category.name} (Copy)`,
-        description: `${category.description} (Copy)`,
-        imageUrl: category.imageUrl,
-        parentCategory: category.parentCategory || null,
+        title: `${post.title} (Copy)`,
+        slug: `${post.slug}-copy-${Date.now()}`,
+        excerpt: post.excerpt,
+        content: post.content,
+        contentType: post.contentType,
+        categories: post.categories,
+        tags: post.tags,
+        featuredImage: post.featuredImage,
+        status: "draft" as const,
         isActive: false,
+        isFeatured: false,
+        allowComments: post.allowComments,
+        seo: post.seo,
+        readingTime: post.readingTime,
       };
+
       try {
-        await addCategory(payload).unwrap();
+        await addBlogPost(payload).unwrap();
         if (isClient) {
-          toast.success(`"${category.name}" duplicated successfully`);
+          toast.success(`"${post.title}" duplicated successfully`);
         }
       } catch (error) {
         console.error(error);
         if (isClient) {
-          toast.error("Failed to duplicate category!");
+          toast.error("Failed to duplicate post!");
         }
       }
     };
@@ -362,54 +381,47 @@ const CategoriesContent = memo(() => {
       try {
         await bulkDelete(ids).unwrap();
         if (isClient) {
-          toast.success("Categories deleted successfully");
+          toast.success("Posts deleted successfully");
         }
       } catch (error) {
         console.error("Bulk delete error:", error);
         if (isClient) {
-          toast.error("Failed to delete categories");
+          toast.error("Failed to delete posts");
         }
       }
     };
 
-    const handleBulkToggle = async (ids: string[], active: boolean) => {
+    const handleBulkToggle = async (
+      ids: string[],
+      property: "isActive" | "isFeatured" | "allowComments",
+      value: boolean
+    ) => {
       try {
-        await bulkToggle({ ids, property: "isActive", value: active }).unwrap();
+        await bulkToggle({ ids, property, value }).unwrap();
+
+        const propertyLabels = {
+          isActive: value ? "Activated" : "Deactivated",
+          isFeatured: value ? "Added to Featured" : "Removed from Featured",
+          allowComments: value ? "Comments Enabled" : "Comments Disabled",
+        };
+
         if (isClient) {
           toast.success(
-            `${ids.length > 1 ? `Categories` : `Category`} ${
-              active ? "Activated" : "Deactivated"
+            `${ids.length > 1 ? "Posts" : "Post"} ${
+              propertyLabels[property]
             } Successfully`
           );
         }
       } catch (error) {
         console.error("Bulk toggle error:", error);
         if (isClient) {
-          toast.error("Failed to update category statuses!");
+          toast.error("Failed to update posts!");
         }
       }
     };
 
     const handleFeaturedToggle = async (ids: string[], featured: boolean) => {
-      try {
-        await bulkToggle({
-          ids,
-          property: "isFeatured",
-          value: featured,
-        }).unwrap();
-        if (isClient) {
-          toast.success(
-            `Categories ${
-              featured ? "Added to " : "Removed From "
-            }Featured successfully`
-          );
-        }
-      } catch (error) {
-        // console.error("Featured toggle error:", error);
-        if (isClient) {
-          toast.error("Failed to update Pin Statuses!");
-        }
-      }
+      await handleBulkToggle(ids, "isFeatured", featured);
     };
 
     return {
@@ -419,16 +431,19 @@ const CategoriesContent = memo(() => {
       handleDuplicateClick: handleDuplicate,
       handleToggleStatusClick: handleToggleStatus,
       handleBulkDelete,
-      handleBulkStatusToggle: handleBulkToggle,
+      handleBulkStatusToggle: (ids: string[], value: boolean) =>
+        handleBulkToggle(ids, "isActive", value),
       handleFeaturedStatusToggle: handleFeaturedToggle,
     };
-  }, [bulkDelete, bulkToggle, addCategory, triggerGetCategory, isClient]);
+  }, [bulkDelete, bulkToggle, addBlogPost, triggerGetPost, isClient]);
+
   // Go to last available page on Last Item Delete
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
       dispatch(setCurrentPage(totalPages));
     }
   }, [totalPages, currentPage]);
+
   // Optimized search handler
   const handleSearch = useCallback(
     (value: string) => {
@@ -445,8 +460,7 @@ const CategoriesContent = memo(() => {
   const handleSetViewModalOpen = useCallback((open: boolean) => {
     if (!open) {
       setViewModalOpen(false);
-      // Clear selected item when modal closes
-      setSelectedCategory(null);
+      setSelectedPost(null);
     } else {
       setViewModalOpen(true);
     }
@@ -456,23 +470,20 @@ const CategoriesContent = memo(() => {
   const handleFormClose = useCallback((open: boolean) => {
     setIsFormOpen(open);
     if (!open) {
-      setEditingCategory(null);
-      // Small delay to ensure smooth state transitions
+      setEditingPost(null);
       setTimeout(() => {
-        setSelectedCategory(null);
+        setSelectedPost(null);
       }, 100);
     }
   }, []);
 
   const handleModalEdit = useCallback(
-    (category: ICategory) => {
-      // Clear modal state first
+    (post: IBlogPost) => {
       setViewModalOpen(false);
-      setSelectedCategory(null);
-      // Then trigger edit with a small delay to ensure state is cleared
+      setSelectedPost(null);
       setTimeout(() => {
-        handlers.handleEditClick(category);
-      }, 50); // Increased delay slightly for better state management
+        handlers.handleEditClick(post);
+      }, 50);
     },
     [handlers]
   );
@@ -480,7 +491,7 @@ const CategoriesContent = memo(() => {
   const handleAddNew = useCallback(() => setIsFormOpen(true), []);
   const handleClearSearch = useCallback(() => handleSearch(""), [handleSearch]);
 
-  const refetchCategories = useCallback(() => {
+  const refetchPosts = useCallback(() => {
     refetch();
   }, [refetch]);
 
@@ -488,15 +499,14 @@ const CategoriesContent = memo(() => {
   useEffect(() => {
     if (!isClient) return;
 
-    // Prefetch common heavy components on mount
-    import("@/components/categories/CategoryGrid");
-    import("@/components/categories/CategoryTable");
-    import("@/components/categories/CategoryForm");
+    import("@/components/blogpost/BlogPostGrid");
+    import("@/components/blogpost/BlogPostTable");
+    import("@/components/blogpost/BlogPostForm");
   }, [isClient]);
 
-  // Show enhanced skeleton during initial load or when not client-side
+  // Show enhanced skeleton during initial load
   if (isLoading || !isClient) {
-    return <PageSkeleton cols={3} lgcols={4} items={12} />;
+    return <PageSkeleton cols={2} lgcols={3} items={12} />;
   }
 
   // Loading state
@@ -505,32 +515,32 @@ const CategoriesContent = memo(() => {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       {/* Header */}
-      <CategoriesHeader
+      <BlogPostsHeader
         searchQuery={searchQuery}
         onSearch={handleSearch}
         dispatch={dispatch}
         sortBy={sortBy}
         viewMode={viewMode}
-        canManageCategories={canManageCategories}
+        canManagePosts={canManagePosts}
         onAddNew={handleAddNew}
         loading={loading}
-        refetch={refetchCategories}
+        refetch={refetchPosts}
       />
 
       {/* Error Message */}
       {isError && <ErrorMessage error={error} />}
 
       {/* Content Area */}
-      {loading && categories.length === 0 ? (
+      {loading && posts.length === 0 ? (
         viewMode === "grid" ? (
-          <GridSkeletonLoader cols={3} lgcols={4} items={12} />
+          <GridSkeletonLoader cols={2} lgcols={3} items={12} />
         ) : (
-          <TableSkeletonLoader cols={4} rows={9} />
+          <TableSkeletonLoader cols={5} rows={9} />
         )
-      ) : categories.length > 0 ? (
-        <CategoryContentView
+      ) : posts.length > 0 ? (
+        <BlogPostContentView
           viewMode={viewMode}
-          categories={categories}
+          posts={posts}
           handlers={handlers}
           totalPages={totalPages}
         />
@@ -538,39 +548,43 @@ const CategoriesContent = memo(() => {
         <EmptySearchState
           searchQuery={searchQuery}
           onClearSearch={handleClearSearch}
-          title="category"
-          icon={Building}
+          title="blog post"
+          icon={FileText}
         />
       ) : (
         <EmptyDataState
-          canManage={canManageCategories}
+          canManage={canManagePosts}
           onAddNew={handleAddNew}
-          title="category"
-          icon={Building}
+          title="blog post"
+          icon={FileText}
         />
       )}
 
-      {/* Modals with Suspense - Only render on client */}
+      {/* Modals */}
       {isClient && (
         <>
           <ChunkErrorBoundaryWithSuspense>
-            <CategoryForm
-              open={isFormOpen}
-              onOpenChange={handleFormClose}
-              category={editingCategory}
+            <BlogPostForm
+              postId={editingPost?.id}
+              isFormOpen={isFormOpen}
+              handleFormClose={handleFormClose}
+              onComplete={() => {
+                handleFormClose(false);
+                refetchPosts();
+              }}
             />
           </ChunkErrorBoundaryWithSuspense>
 
           <ChunkErrorBoundaryWithSuspense>
-            <CategoryModal
+            <BlogPostModal
               viewModalOpen={viewModalOpen}
               setViewModalOpen={handleSetViewModalOpen}
-              selectedCategory={selectedCategory}
+              selectedBlogPost={selectedPost}
               onEdit={handleModalEdit}
               deleteDialogOpen={deleteDialogOpen}
               setDeleteDialogOpen={setDeleteDialogOpen}
-              categoryToDelete={categoryToDelete}
-              onCategoriesChange={refetchCategories}
+              blogpostToDelete={postToDelete}
+              onBlogPostChange={refetchPosts}
             />
           </ChunkErrorBoundaryWithSuspense>
         </>
@@ -579,15 +593,15 @@ const CategoriesContent = memo(() => {
   );
 });
 
-CategoriesContent.displayName = "CategoriesContent";
+BlogPostsContent.displayName = "BlogPostsContent";
 
 // Main component with error boundary
 export const BlogPostPage = () => {
   return (
     <ChunkErrorBoundaryWithSuspense
-      fallback={<PageSkeleton cols={3} lgcols={4} items={12} />}
+      fallback={<PageSkeleton cols={2} lgcols={3} items={12} />}
     >
-      <CategoriesContent />
+      <BlogPostsContent />
     </ChunkErrorBoundaryWithSuspense>
   );
 };

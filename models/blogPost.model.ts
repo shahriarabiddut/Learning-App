@@ -168,7 +168,7 @@ const BlogPostSchema: Schema = new Schema(
 );
 
 /* Indexes for common queries */
-BlogPostSchema.index({ slug: 1 });
+// BlogPostSchema.index({ slug: 1 });
 BlogPostSchema.index({ status: 1, publishedAt: -1 });
 BlogPostSchema.index({ tags: 1 });
 BlogPostSchema.index({ "seo.keywords": 1 });

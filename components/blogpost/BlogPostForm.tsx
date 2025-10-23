@@ -273,7 +273,7 @@ export function BlogPostForm({
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-2 bg-gray-50 dark:bg-gray-900 p-6 sm:p-8"
+              className="space-y-2 bg-gray-50 dark:bg-gray-900 p-1 "
             >
               {/* Basic Information Section */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6 shadow-sm">
@@ -344,9 +344,9 @@ export function BlogPostForm({
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
+                        {/* <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
                           Used in the URL: /blog/{field.value || "your-slug"}
-                        </FormDescription>
+                        </FormDescription> */}
                         <FormMessage className="text-red-500" />
                       </FormItem>
                     )}
@@ -902,7 +902,7 @@ export function BlogPostForm({
                 <Button
                   type="submit"
                   disabled={form.formState.isSubmitting}
-                  className="px-8 py-2 h-11 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 dark:from-purple-600 dark:to-pink-700 dark:hover:from-purple-700 dark:hover:to-pink-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   {form.formState.isSubmitting ? (
                     <>

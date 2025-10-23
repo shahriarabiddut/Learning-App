@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IBlogPost } from "@/models/blogPost.model";
+import { Calendar, Clock, Eye, MessageSquare, User } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { FaCheckCircle, FaStar } from "react-icons/fa";
@@ -33,12 +34,12 @@ export const BlogPostGrid = ({
   handleBulkStatusToggle,
   handleFeaturedStatusToggle,
 }: BlogPostGridProps) => {
-  const [selectedBlogposts, setSelectedBlogposts] = useState<string[]>([]);
+  const [selectedBlogPosts, setSelectedBlogPosts] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
 
-  // Toggle selection for a single blogpost
-  const toggleBlogpostselection = (blogpostId: string) => {
-    setSelectedBlogposts((prev) =>
+  // Toggle selection for a single blog post
+  const toggleBlogPostSelection = (blogpostId: string) => {
+    setSelectedBlogPosts((prev) =>
       prev.includes(blogpostId)
         ? prev.filter((id) => id !== blogpostId)
         : [...prev, blogpostId]
@@ -47,10 +48,10 @@ export const BlogPostGrid = ({
 
   // Toggle select all on current page
   const toggleSelectAll = () => {
-    if (selectedBlogposts.length === blogposts.length) {
-      setSelectedBlogposts([]);
+    if (selectedBlogPosts.length === blogposts.length) {
+      setSelectedBlogPosts([]);
     } else {
-      setSelectedBlogposts(blogposts.map((blogpost) => blogpost?.id));
+      setSelectedBlogPosts(blogposts.map((blogpost) => blogpost?.id));
     }
   };
 
@@ -73,53 +74,85 @@ export const BlogPostGrid = ({
       const range = blogposts
         .slice(start, end + 1)
         .map((blogpost) => blogpost.id)
-        .filter((id): id is string => !!id); // Filter out undefined ids
+        .filter((id): id is string => !!id);
 
-      setSelectedBlogposts((prev) => {
-        // Determine if we should add or remove based on the last clicked checkbox
+      setSelectedBlogPosts((prev) => {
         const shouldAdd = !prev.includes(blogposts[lastCheckedIndex].id);
 
         if (shouldAdd) {
-          // Add all in range that aren't already selected
           const newSelections = new Set(prev);
           range.forEach((id) => newSelections.add(id));
           return Array.from(newSelections);
         } else {
-          // Remove all in range that are selected
           return prev.filter((id) => !range.includes(id));
         }
       });
     } else {
-      toggleBlogpostselection(blogpostId);
+      toggleBlogPostSelection(blogpostId);
       setLastCheckedIndex(index);
     }
   };
 
   // Handle bulk delete
   const handleBulkDeleteClick = () => {
-    if (selectedBlogposts.length === 0) return;
-    handleBulkDelete(selectedBlogposts);
-    setSelectedBlogposts([]);
+    if (selectedBlogPosts.length === 0) return;
+    handleBulkDelete(selectedBlogPosts);
+    setSelectedBlogPosts([]);
   };
 
   // Handle bulk status toggle
   const handleBulkStatusToggleClick = (targetStatus: boolean) => {
-    // Handle bulk status toggle
-    handleBulkStatusToggle(selectedBlogposts, targetStatus);
-  }; // Handle Featured Click
-  const handleFeaturedClick = (targetStatus: boolean) => {
-    handleFeaturedStatusToggle(selectedBlogposts, targetStatus);
+    handleBulkStatusToggle(selectedBlogPosts, targetStatus);
   };
+
+  // Handle Featured Click
+  const handleFeaturedClick = (targetStatus: boolean) => {
+    handleFeaturedStatusToggle(selectedBlogPosts, targetStatus);
+  };
+
+  // Format date
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return "N/A";
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  // Get status badge variant
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: any; className: string }> = {
+      published: {
+        variant: "default",
+        className:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+      },
+      draft: {
+        variant: "secondary",
+        className:
+          "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+      },
+      archived: {
+        variant: "outline",
+        className:
+          "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+      },
+    };
+
+    return variants[status] || variants.draft;
+  };
+
   return (
     <>
-      {selectedBlogposts.length > 0 && (
-        <div className="flex  flex-wrap items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3 ">
+      {selectedBlogPosts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3">
           <span className="text-sm font-medium">
-            {selectedBlogposts.length} selected
+            {selectedBlogPosts.length} selected
           </span>
 
           <Button variant="outline" size="sm" onClick={toggleSelectAll}>
-            {selectedBlogposts.length === blogposts.length
+            {selectedBlogPosts.length === blogposts.length
               ? "Deselect all"
               : "Select all"}
           </Button>
@@ -151,16 +184,18 @@ export const BlogPostGrid = ({
             <FaCheckCircle className="h-4 w-4" />
             Activate
           </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleFeaturedClick(true)}
             className="bg-orange-200 text-orange-800 hover:bg-orange-400 hover:text-white gap-1 dark:bg-orange-900 dark:text-orange-100 dark:hover:bg-orange-700"
-            disabled={selectedBlogposts.length > 8}
+            disabled={selectedBlogPosts.length > 8}
           >
             <FaStar className="h-4 w-4" />
             Add to Featured
           </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -173,90 +208,151 @@ export const BlogPostGrid = ({
         </div>
       )}
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {blogposts.map((blogpost, index) => (
-          <Card
-            key={blogpost.id}
-            className="p-7 w-auto flex flex-col relative bg-card text-card-foreground"
-          >
-            {/* Checkbox */}
-            <div className="absolute top-[2%] right-[0%]">
-              <Checkbox
-                checked={selectedBlogposts.includes(blogpost?.id)}
-                onCheckedChange={(checked) =>
-                  handleCheckboxChange(checked, index, blogpost?.id)
-                }
-                className="mr-2"
-              />
-            </div>
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {blogposts.map((blogpost, index) => {
+          const statusInfo = getStatusBadge(blogpost.status || "draft");
 
-            {/* Card Content */}
-            <div
-              className="flex items-start space-x-4 cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-md p-1 -m-1 relative"
-              onClick={() => handleViewClick(blogpost)}
+          return (
+            <Card
+              key={blogpost.id}
+              className="overflow-hidden flex flex-col relative bg-card text-card-foreground hover:shadow-lg transition-shadow duration-200"
             >
-              {blogpost?.featured && (
+              {/* Checkbox */}
+              <div className="absolute top-3 right-3 z-10">
+                <Checkbox
+                  checked={selectedBlogPosts.includes(blogpost?.id)}
+                  onCheckedChange={(checked) =>
+                    handleCheckboxChange(checked, index, blogpost?.id)
+                  }
+                  className="bg-white dark:bg-gray-800 border-2"
+                />
+              </div>
+
+              {/* Featured Badge */}
+              {blogpost?.isFeatured && (
                 <Badge
                   variant="outline"
-                  className="absolute top-3 left-3 z-20 bg-white/70 text-gray-800  px-2"
+                  className="absolute top-3 left-3 z-10 bg-yellow-100/90 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700"
                 >
-                  {blogpost.featured ? (
-                    <div className="flex items-center justify-between gap-2">
-                      {" "}
-                      <FaStar
-                        className="text-yellow-400"
-                        title="Featured"
-                      />{" "}
-                      Featured
-                    </div>
-                  ) : (
-                    ""
-                  )}
+                  <FaStar className="w-3 h-3 mr-1" />
+                  Featured
                 </Badge>
               )}
-              {/* Image Container */}
-              <div className="flex-shrink-0 w-28 h-28 rounded-xl border-2 border-border bg-muted flex items-center justify-center">
-                {blogpost.imageUrl ? (
-                  <>
-                    <Image
-                      fill
-                      src={blogpost.imageUrl}
-                      alt={blogpost.name}
-                      className="w-full h-full rounded-lg object-cover"
-                    />
-                  </>
+
+              {/* Featured Image */}
+              <div
+                className="relative w-full h-48 bg-muted cursor-pointer group"
+                onClick={() => handleViewClick(blogpost)}
+              >
+                {blogpost.featuredImage ? (
+                  <Image
+                    src={blogpost.featuredImage}
+                    alt={blogpost.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
                 ) : (
-                  <span className="text-2xl text-muted-foreground">
-                    {blogpost.name.charAt(0)}
-                  </span>
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
+                    <span className="text-6xl font-bold text-purple-300 dark:text-purple-700">
+                      {blogpost.title.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 )}
               </div>
 
-              {/* Content */}
-              <div className="min-w-0 flex-1 space-y-2">
-                <h2 className="text-lg font-bold text-foreground truncate capitalize">
-                  {blogpost.name}
-                </h2>
-                <div className="capitalize line-clamp-3">
-                  {blogpost.description}
+              {/* Card Content */}
+              <div className="p-5 flex-1 flex flex-col">
+                {/* Status and Category */}
+                <div className="flex items-center gap-2 mb-3 capitalize">
+                  <Badge className={statusInfo.className}>
+                    {blogpost.status}
+                  </Badge>
+                  {blogpost.categories && blogpost.categories.length > 0 && (
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {typeof blogpost.categories[0] === "string"
+                        ? blogpost.categories[0]
+                        : blogpost.categories[0]?.name || "Uncategorized"}
+                    </Badge>
+                  )}
                 </div>
-              </div>
-            </div>
 
-            {/* Actions */}
-            <BlogPostActions
-              blogpost={blogpost}
-              onEdit={() => handleEditClick(blogpost)}
-              onView={() => handleViewClick(blogpost)}
-              onDelete={() => handleDeleteClick(blogpost.id)}
-              onDuplicate={() => handleDuplicateClick(blogpost)}
-              showtoggleButtons={true}
-              onToggleStatus={() =>
-                handleToggleStatusClick(blogpost.id, blogpost.isActive)
-              }
-            />
-          </Card>
-        ))}
+                {/* Title */}
+                <h3
+                  className="text-lg font-bold text-foreground mb-2 line-clamp-2 cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                  onClick={() => handleViewClick(blogpost)}
+                >
+                  {blogpost.title}
+                </h3>
+
+                {/* Excerpt */}
+                {blogpost.excerpt && (
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
+                    {blogpost.excerpt}
+                  </p>
+                )}
+
+                {/* Meta Information */}
+                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mb-4">
+                  {blogpost.authorName && (
+                    <div className="flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      <span>{blogpost.authorName}</span>
+                    </div>
+                  )}
+                  {blogpost.publishedAt && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{formatDate(blogpost.publishedAt)}</span>
+                    </div>
+                  )}
+                  {blogpost.readingTime && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{blogpost.readingTime} min read</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4 pb-4 border-b">
+                  <div className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    <span>{blogpost.views || 0} views</span>
+                  </div>
+                  {blogpost.allowComments && (
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" />
+                      <span>{blogpost.comments?.length || 0} comments</span>
+                    </div>
+                  )}
+                  {blogpost.tags && blogpost.tags.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">
+                        {blogpost.tags.length} tags
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <BlogPostActions
+                  blogpost={blogpost}
+                  onEdit={() => handleEditClick(blogpost)}
+                  onView={() => handleViewClick(blogpost)}
+                  onDelete={() => handleDeleteClick(blogpost.id)}
+                  onDuplicate={() => handleDuplicateClick(blogpost)}
+                  showtoggleButtons={true}
+                  onToggleStatus={() =>
+                    handleToggleStatusClick(
+                      blogpost.id,
+                      blogpost.isActive || false
+                    )
+                  }
+                />
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </>
   );

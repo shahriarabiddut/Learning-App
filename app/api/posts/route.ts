@@ -73,9 +73,9 @@ export async function GET(request: NextRequest) {
     if (isFeatured === "true") {
       query.isFeatured = true;
     }
-    if (isActive !== undefined) {
-      query.isActive = isActive === "true";
-    }
+    // if (isActive !== undefined) {
+    //   query.isActive = isActive === "true";
+    // }
 
     const [rawData, total] = await Promise.all([
       BlogPost.find(query)
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         const obj = doc.toObject();
 
         return {
-          id: obj._id,
+          id: obj._id || obj.id,
           title: obj.title,
           slug: obj.slug,
           excerpt: obj.excerpt,
@@ -170,7 +170,6 @@ export async function POST(request: NextRequest) {
       author: user.id,
       authorName: user.name,
       createdBy: user.id,
-      store: user.store,
     });
 
     revalidatePath("/dashboard/posts");

@@ -15,7 +15,7 @@ interface BlogPostPaginationProps {
 const BlogPostPagination = memo(({ totalPages }: BlogPostPaginationProps) => {
   const dispatch = useAppDispatch();
   const { currentPage, itemsPerPage } = useAppSelector(
-    (state) => state.blogpost
+    (state) => state.blogPosts
   );
 
   const handlePageChange = (page: number) => {

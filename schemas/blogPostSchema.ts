@@ -43,8 +43,8 @@ export const blogPostSchema = z.object({
   contentBlocks: z.array(contentBlockSchema).optional(),
   contentType: z.enum(["html", "markdown", "blocks"]).optional(),
 
-  author: z.string().min(1, "Author is required"),
-  authorName: z.string().optional(),
+  // author: z.string().min(1, "Author is required"),
+  // authorName: z.string().optional(),
 
   categories: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
