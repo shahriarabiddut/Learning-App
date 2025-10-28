@@ -16,9 +16,6 @@ export async function GET(request: NextRequest) {
   try {
     let query: any = {};
     const superAdmin = isSuperAdmin(user);
-    if (user && !superAdmin) {
-      query.store = user.store;
-    }
 
     const { searchParams } = new URL(request.url);
     let page = parseInt(searchParams.get("page") || "1");

@@ -7,8 +7,6 @@ declare global {
     email: string;
     emailVerified: boolean;
     image?: string | null | undefined;
-    store?: string;
-    storeType?: string;
     userType?: string;
     role?: string;
     createdAt: string | Date;

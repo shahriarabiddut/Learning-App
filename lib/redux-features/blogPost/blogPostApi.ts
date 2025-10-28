@@ -855,44 +855,6 @@ export const blogPostApi = createApi({
       },
     }),
 
-    // Get related posts
-    fetchRelatedPosts: build.query<
-      IBlogPost[],
-      { postId: string; limit?: number }
-    >({
-      query: ({ postId, limit = 4 }) => {
-        const searchParams = new URLSearchParams();
-        searchParams.set("limit", String(limit));
-        return `/${postId}/related?${searchParams.toString()}`;
-      },
-      providesTags: (result, error, { postId }) =>
-        result
-          ? [
-              { type: "BlogPosts", id: `RELATED-${postId}` },
-              ...result.map((post) => ({
-                type: "BlogPosts" as const,
-                id: post.id,
-              })),
-            ]
-          : [{ type: "BlogPosts", id: `RELATED-${postId}` }],
-      transformResponse: (response: any): IBlogPost[] => {
-        if (response?.data && Array.isArray(response.data)) {
-          return response.data.map((item: any) => ({
-            ...item,
-            id: item.id ?? item._id ?? String(Math.random()).slice(2),
-          }));
-        }
-        return [];
-      },
-      transformErrorResponse: (response: any) => {
-        if (typeof response?.data === "string") {
-          const parsed = safeParse<{ error?: string }>(response.data);
-          return parsed?.error ?? null;
-        }
-        return { message: "Failed to fetch related posts" };
-      },
-    }),
-
     // Get posts by category
     fetchPostsByCategory: build.query<
       PaginatedBlogPosts,
@@ -1010,9 +972,7 @@ export const {
   useBulkRemoveTagsMutation,
   useBulkAssignCategoryMutation,
   useFetchFeaturedPostsQuery,
-  useFetchRelatedPostsQuery,
   useFetchPostsByCategoryQuery,
   useLazyFetchFeaturedPostsQuery,
-  useLazyFetchRelatedPostsQuery,
   useLazyFetchPostsByCategoryQuery,
 } = blogPostApi;

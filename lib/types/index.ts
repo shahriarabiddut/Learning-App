@@ -6,8 +6,6 @@ export interface SessionUser {
   email: string;
   emailVerified: boolean;
   image?: string | null | undefined;
-  store: string | null | undefined;
-  storeType: string;
   userType: string;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -24,8 +22,6 @@ export type ServerUser = {
   updatedAt: Date;
   image?: string | null;
   role?: string | null;
-  store?: string | null;
-  storeType?: string | null;
   userType?: string | null;
   isActive?: boolean | null;
   twoFactorEnabled?: boolean | null;

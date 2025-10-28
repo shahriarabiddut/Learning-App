@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Non-super admins can only see their own posts or posts from their store
     if (user && !superAdmin) {
-      query.$or = [{ author: user.id }, { store: user.store }];
+      query.$or = [{ author: user.id }];
     }
 
     const { searchParams } = new URL(request.url);

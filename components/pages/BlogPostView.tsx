@@ -1,25 +1,38 @@
+// app/blog/[slug]/BlogPostView.tsx (or your file location)
 "use client";
 
+import Footer from "@/components/Footer";
+import Header from "@/components/home/header";
+import RichTextDisplay from "@/components/shared/RichTextDisplay";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import Image from "next/image";
-import Header from "@/components/home/header";
-import Footer from "@/components/Footer";
-import {
-  useFetchRelatedPostsQuery,
-  useIncrementPostViewsMutation,
-} from "@/lib/redux-features/blogPost/blogPostApi";
-import { Loader2, Calendar, Clock, Eye, Share2, Tag, User } from "lucide-react";
-import { useEffect } from "react";
-import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
-import RichTextDisplay from "@/components/shared/RichTextDisplay";
+import { useIncrementPostViewsMutation } from "@/lib/redux-features/blogPost/blogPostApi";
 import { IBlogPost } from "@/models/blogPost.model";
+import { Calendar, Clock, Eye, Share2, Tag, User } from "lucide-react";
+import Image from "next/image";
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { CommentsSection } from "../blogpost/CommentSection";
+import { RelatedPosts } from "../blogpost/RelatedPosts";
 
 interface BlogPostViewProps {
-  initialPost: IBlogPost;
+  initialPost: IBlogPost & {
+    relatedPosts?: Array<{
+      id: string;
+      title: string;
+      slug: string;
+      excerpt?: string;
+      authorName?: string;
+      categories?: Array<{ id: string; name: string; slug: string }>;
+      tags?: string[];
+      featuredImage?: string;
+      publishedAt?: string;
+      readingTime?: string;
+      views?: number;
+      createdAt?: string;
+    }>;
+  };
 }
 
 function formatFullDate(date: string | Date | undefined): string {
@@ -37,13 +50,7 @@ function formatFullDate(date: string | Date | undefined): string {
 
 export function BlogPostView({ initialPost }: BlogPostViewProps) {
   const post = initialPost;
-
-  // Fetch related posts
-  const { data: relatedPosts = [], isLoading: relatedLoading } =
-    useFetchRelatedPostsQuery(
-      { postId: post.id, limit: 4 },
-      { skip: !post.id }
-    );
+  const relatedPosts = post.relatedPosts || [];
 
   // Increment views
   const [incrementViews] = useIncrementPostViewsMutation();
@@ -234,65 +241,13 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
         )}
 
         {/* Related Posts */}
-        {relatedPosts.length > 0 && (
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
-              Related Articles
-            </h2>
-
-            {relatedLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {relatedPosts.map((relatedPost) => (
-                  <Link
-                    key={relatedPost.id}
-                    href={`/blog/${relatedPost.slug}`}
-                    className="group"
-                  >
-                    <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border-0 shadow-md group-hover:translate-y-[-4px]">
-                      <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-emerald-100 via-teal-50 to-cyan-100 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-900">
-                        <Image
-                          src={relatedPost.featuredImage || "/placeholder.svg"}
-                          alt={relatedPost.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      </div>
-                      <CardContent className="pt-4">
-                        {relatedPost.categories &&
-                          relatedPost.categories.length > 0 && (
-                            <Badge variant="secondary" className="mb-2 text-xs">
-                              {typeof relatedPost.categories[0] === "string"
-                                ? relatedPost.categories[0]
-                                : relatedPost.categories[0]?.name || ""}
-                            </Badge>
-                          )}
-                        <h3 className="font-bold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                          {relatedPost.title}
-                        </h3>
-                        {relatedPost.excerpt && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                            {relatedPost.excerpt}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{relatedPost.authorName || "Anonymous"}</span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {relatedPost.readingTime || "5 min"}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <RelatedPosts posts={relatedPosts} />
+        {/* Comments Section */}
+        <CommentsSection
+          postId={post.id}
+          comments={post.comments}
+          allowComments={post.allowComments}
+        />
       </article>
 
       <Footer />
