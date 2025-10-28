@@ -816,6 +816,137 @@ export const blogPostApi = createApi({
       },
     }),
 
+    // Get featured posts
+    fetchFeaturedPosts: build.query<
+      IBlogPost[],
+      { limit?: number; category?: string }
+    >({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        if (params.limit) searchParams.set("limit", String(params.limit));
+        if (params.category) searchParams.set("category", params.category);
+        return `/featured?${searchParams.toString()}`;
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              { type: "BlogPosts", id: "FEATURED" },
+              ...result.map((post) => ({
+                type: "BlogPosts" as const,
+                id: post.id,
+              })),
+            ]
+          : [{ type: "BlogPosts", id: "FEATURED" }],
+      transformResponse: (response: any): IBlogPost[] => {
+        if (response?.data && Array.isArray(response.data)) {
+          return response.data.map((item: any) => ({
+            ...item,
+            id: item.id ?? item._id ?? String(Math.random()).slice(2),
+          }));
+        }
+        return [];
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch featured posts" };
+      },
+    }),
+
+    // Get related posts
+    fetchRelatedPosts: build.query<
+      IBlogPost[],
+      { postId: string; limit?: number }
+    >({
+      query: ({ postId, limit = 4 }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("limit", String(limit));
+        return `/${postId}/related?${searchParams.toString()}`;
+      },
+      providesTags: (result, error, { postId }) =>
+        result
+          ? [
+              { type: "BlogPosts", id: `RELATED-${postId}` },
+              ...result.map((post) => ({
+                type: "BlogPosts" as const,
+                id: post.id,
+              })),
+            ]
+          : [{ type: "BlogPosts", id: `RELATED-${postId}` }],
+      transformResponse: (response: any): IBlogPost[] => {
+        if (response?.data && Array.isArray(response.data)) {
+          return response.data.map((item: any) => ({
+            ...item,
+            id: item.id ?? item._id ?? String(Math.random()).slice(2),
+          }));
+        }
+        return [];
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch related posts" };
+      },
+    }),
+
+    // Get posts by category
+    fetchPostsByCategory: build.query<
+      PaginatedBlogPosts,
+      { categoryId: string; page?: number; limit?: number }
+    >({
+      query: ({ categoryId, page = 1, limit = 10 }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
+        return `/category/${categoryId}?${searchParams.toString()}`;
+      },
+      providesTags: (result, error, { categoryId }) => {
+        if (error) return [{ type: "BlogPosts", id: `CATEGORY-${categoryId}` }];
+        const tags: any[] = [
+          { type: "BlogPosts", id: `CATEGORY-${categoryId}` },
+        ];
+        result?.data?.forEach((post) =>
+          tags.push({ type: "BlogPosts", id: post.id })
+        );
+        return tags;
+      },
+      transformResponse: (response: any): PaginatedBlogPosts => {
+        const mapItem = (it: any) => {
+          if (!it) return it;
+          return {
+            ...it,
+            id: it.id ?? it._id ?? String(Math.random()).slice(2),
+          } as IBlogPost;
+        };
+
+        if (response?.data) {
+          const arr = Array.isArray(response.data)
+            ? response.data.map(mapItem)
+            : [];
+          const page = Math.max(response.page || 1, 1);
+          const total = Math.max(response.total ?? arr.length, 0);
+          const totalPages = Math.max(
+            response.totalPages ??
+              Math.ceil(total / (response.limit ?? (arr.length || 1))),
+            0
+          );
+          return { data: arr, page, total, totalPages };
+        }
+
+        return { data: [], page: 1, total: 0, totalPages: 0 };
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch category posts" };
+      },
+    }),
     // BULK ASSIGN CATEGORY
     bulkAssignCategory: build.mutation<
       BulkActionResponse,
@@ -878,4 +1009,10 @@ export const {
   useBulkAddTagsMutation,
   useBulkRemoveTagsMutation,
   useBulkAssignCategoryMutation,
+  useFetchFeaturedPostsQuery,
+  useFetchRelatedPostsQuery,
+  useFetchPostsByCategoryQuery,
+  useLazyFetchFeaturedPostsQuery,
+  useLazyFetchRelatedPostsQuery,
+  useLazyFetchPostsByCategoryQuery,
 } = blogPostApi;

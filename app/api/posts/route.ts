@@ -73,9 +73,7 @@ export async function GET(request: NextRequest) {
     if (isFeatured === "true") {
       query.isFeatured = true;
     }
-    // if (isActive !== undefined) {
-    //   query.isActive = isActive === "true";
-    // }
+    // query.isActive = isActive === "true";
 
     const [rawData, total] = await Promise.all([
       BlogPost.find(query)
