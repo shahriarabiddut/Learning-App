@@ -9,7 +9,7 @@ import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
 
 const BASE_URL = `${API_SITE_URL}/categories`;
 
-type PaginatedCategories = PaginatedParams<ICategory>;
+export type PaginatedCategories = PaginatedParams<ICategory>;
 
 function getCurrentParams(getState: () => unknown) {
   const state = getState() as any;

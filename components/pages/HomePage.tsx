@@ -4,7 +4,7 @@ import Hero from "../home/hero";
 import LatestPosts from "../home/latest-posts";
 import NewsletterSection from "../home/newsletter-section";
 import TopAuthors from "../home/top-authors";
-import TopCategories from "../home/top-categories";
+import Categories from "../home/categories";
 import TrendingSection from "../home/trending-section";
 
 const HomePage = () => {
@@ -12,11 +12,11 @@ const HomePage = () => {
     <main className="min-h-screen bg-background dark:bg-background">
       <Header />
       <Hero />
+      <TopAuthors />
+      <Categories />
       <FeaturedSection />
       <LatestPosts />
       <TrendingSection />
-      <TopCategories />
-      <TopAuthors />
       <NewsletterSection />
     </main>
   );

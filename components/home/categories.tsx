@@ -3,63 +3,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useFetchPostCategoriesQuery } from "@/lib/redux-features/blogPost/blogPostApi";
 
-const categories = [
-  {
-    id: 1,
-    name: "Lifestyle",
-    count: 24,
-    image: "/lifestyle-wellness.jpg",
-    color: "from-green-400 to-green-600",
-  },
-  {
-    id: 2,
-    name: "Technology",
-    count: 18,
-    image: "/technology-innovation.jpg",
-    color: "from-blue-400 to-blue-600",
-  },
-  {
-    id: 3,
-    name: "Home",
-    count: 15,
-    image: "/home-interior-design.jpg",
-    color: "from-amber-400 to-amber-600",
-  },
-  {
-    id: 4,
-    name: "Travel",
-    count: 12,
-    image: "/travel-adventure.png",
-    color: "from-purple-400 to-purple-600",
-  },
-  {
-    id: 5,
-    name: "Fashion",
-    count: 21,
-    image: "/fashion-style.jpg",
-    color: "from-pink-400 to-pink-600",
-  },
-  {
-    id: 6,
-    name: "Food",
-    count: 19,
-    image: "/food-culinary.jpg",
-    color: "from-red-400 to-red-600",
-  },
-];
-
-export default function TopCategories() {
-  const scrollContainerRef = useRef(null);
+export default function Categories() {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [showLeftNav, setShowLeftNav] = useState(false);
   const [showRightNav, setShowRightNav] = useState(true);
+  const autoScrollRef = useRef<number | null>(null);
+
+  // Fetch categories from API
+  const {
+    data: categoriesData,
+    isLoading,
+    isError,
+  } = useFetchPostCategoriesQuery({
+    page: 1,
+    limit: 25,
+    sortBy: "name-asc",
+  });
+
+  const categories = categoriesData?.data || [];
   const shouldAutoScroll = categories.length > 4;
-  const autoScrollRef = useRef(null);
 
   // Check scroll position for navigation buttons
   const checkScrollPosition = () => {
@@ -110,7 +79,7 @@ export default function TopCategories() {
   }, [isPaused, isDragging, shouldAutoScroll]);
 
   // Mouse drag functionality
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollContainerRef.current) return;
     setIsDragging(true);
     setIsPaused(true);
@@ -119,7 +88,7 @@ export default function TopCategories() {
     scrollContainerRef.current.style.scrollBehavior = "auto";
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !scrollContainerRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollContainerRef.current.offsetLeft;
@@ -143,7 +112,7 @@ export default function TopCategories() {
   };
 
   // Touch support
-  const handleTouchStart = (e) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     if (!scrollContainerRef.current) return;
     setIsPaused(true);
     setStartX(e.touches[0].pageX - scrollContainerRef.current.offsetLeft);
@@ -155,7 +124,7 @@ export default function TopCategories() {
   };
 
   // Navigation buttons
-  const scrollByOne = (direction) => {
+  const scrollByOne = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
     setIsPaused(true);
     const cardWidth = 316; // 300px + 16px gap
@@ -169,33 +138,60 @@ export default function TopCategories() {
     setTimeout(() => setIsPaused(false), 1000);
   };
 
-  const CategoryCard = ({ category }) => (
+  // Get gradient color based on category name or index
+  const getCategoryColor = (index: number) => {
+    const colors = [
+      "from-green-400 to-green-600",
+      "from-blue-400 to-blue-600",
+      "from-amber-400 to-amber-600",
+      "from-purple-400 to-purple-600",
+      "from-pink-400 to-pink-600",
+      "from-red-400 to-red-600",
+      "from-cyan-400 to-cyan-600",
+      "from-indigo-400 to-indigo-600",
+      "from-orange-400 to-orange-600",
+      "from-teal-400 to-teal-600",
+    ];
+    return colors[index % colors.length];
+  };
+
+  const CategoryCard = ({
+    category,
+    index,
+  }: {
+    category: any;
+    index: number;
+  }) => (
     <div className="flex-shrink-0 w-[280px] md:w-[300px]">
-      <Link href={`/category/${category.id}`}>
+      <Link href={`/category/${category?.slug || category?.id}`}>
         <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group border-0 shadow-md p-0">
           <CardContent className="p-0 relative h-64 w-full overflow-hidden bg-gradient-to-br from-emerald-100 via-teal-50 to-cyan-100 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-900">
-            <Image
-              src={category.image || "/placeholder.svg"}
-              alt={category.name}
-              fill
-              className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none select-none"
-              draggable="false"
-            />
+            {category?.image && (
+              <Image
+                src={category?.image}
+                alt={category?.name}
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none select-none"
+                draggable="false"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent group-hover:from-black/80 group-hover:via-black/40 transition-all duration-300" />
 
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 select-none">
               <div
-                className={`w-16 h-16 rounded-full bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
+                className={`w-16 h-16 rounded-full bg-gradient-to-br ${getCategoryColor(
+                  index
+                )} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
               >
                 <span className="text-white text-2xl font-bold">
-                  {category.name.charAt(0)}
+                  {category?.name?.charAt(0)}
                 </span>
               </div>
               <h3 className="text-white font-bold text-2xl text-center mb-2 group-hover:translate-y-[-4px] transition-transform duration-300">
-                {category.name}
+                {category?.name}
               </h3>
               <p className="text-white/90 text-sm font-medium bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full">
-                {category.count} articles
+                {category?.postCount || 0} articles
               </p>
             </div>
 
@@ -206,14 +202,59 @@ export default function TopCategories() {
     </div>
   );
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <section
+        id="categories"
+        className="py-16 md:py-24 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10"
+      >
+        <div className="w-11/12 mx-auto">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">
+              Top Categories
+            </h2>
+            <p className="text-muted-foreground text-lg">Explore articles</p>
+          </div>
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (isError || categories.length === 0) {
+    return (
+      <section
+        id="categories"
+        className="py-16 md:py-24 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10"
+      >
+        <div className="w-11/12 mx-auto">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">
+              Top Categories
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              {isError
+                ? "Unable to load categories"
+                : "No categories available yet"}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       id="categories"
       className="py-16 md:py-24 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10"
     >
-      <div className="w-11/12 mx-auto ">
+      <div className="w-11/12 mx-auto">
         <div className="mb-12 text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 bg-clip-text  bg-gradient-to-r from-foreground to-foreground/70">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">
             Top Categories
           </h2>
           <p className="text-muted-foreground text-lg">Explore articles</p>
@@ -267,8 +308,9 @@ export default function TopCategories() {
               {[...categories, ...categories, ...categories].map(
                 (category, index) => (
                   <CategoryCard
-                    key={`${category.id}-${index}`}
+                    key={`${category?.id}-${index}`}
                     category={category}
+                    index={index}
                   />
                 )
               )}
@@ -276,8 +318,12 @@ export default function TopCategories() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {categories.map((category) => (
-              <CategoryCard key={category.id} category={category} />
+            {categories.map((category, index) => (
+              <CategoryCard
+                key={category?.id}
+                category={category}
+                index={index}
+              />
             ))}
           </div>
         )}

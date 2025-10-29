@@ -6,10 +6,37 @@ import {
 } from "@/lib/types/rtkquery";
 import { IBlogPost } from "@/models/blogPost.model";
 import { createApi, fetchBaseQuery, retry } from "@reduxjs/toolkit/query/react";
+import { PaginatedCategories } from "../categories/categoriesApi";
+import { ICategory } from "@/models/categories.model";
 
 const BASE_URL = `${API_SITE_URL}/posts`;
 
 type PaginatedBlogPosts = PaginatedParams<IBlogPost>;
+
+interface TrendingPostsParams {
+  limit?: number;
+  category?: string;
+  timeRange?: "day" | "week" | "month" | "all";
+}
+export interface ITopAuthor {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  role: string;
+  userType: string;
+  bio: string;
+  posts: number;
+  views: number;
+  followers: number;
+  lastPublished?: Date;
+  rank: number;
+}
+
+interface TopAuthorsParams {
+  limit?: number;
+  sortBy?: "views" | "posts" | "followers";
+}
 
 // Extended fetch params for blog posts with additional filters
 interface BlogPostFetchParams extends FetchParams {
@@ -120,7 +147,7 @@ const baseQueryWithRetry = retry(
 export const blogPostApi = createApi({
   reducerPath: "blogPostApi",
   baseQuery: baseQueryWithRetry,
-  tagTypes: ["BlogPosts", "BlogPostDetail"],
+  tagTypes: ["BlogPosts", "BlogPostDetail", "Categories"],
   keepUnusedDataFor: 600,
   refetchOnMountOrArgChange: 300,
   refetchOnFocus: true,
@@ -210,7 +237,207 @@ export const blogPostApi = createApi({
         return { message: "Failed to fetch blog posts" };
       },
     }),
+    fetchPublicBlogPosts: build.query<PaginatedBlogPosts, BlogPostFetchParams>({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        const page = Math.max(params.page || 1, 1);
+        const limit = Math.min(Math.max(params.limit || 50, 1), 240);
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
 
+        if (params.search?.trim() && params.search.trim().length >= 2) {
+          searchParams.set("search", params.search.trim());
+        }
+
+        if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+        if (params.current) searchParams.set("current", params.current);
+
+        // Additional filters
+
+        if (params.author) searchParams.set("author", params.author);
+        if (params.category) searchParams.set("category", params.category);
+        if (params.tags && params.tags.length > 0) {
+          searchParams.set("tags", params.tags.join(","));
+        }
+        if (params.isFeatured !== undefined) {
+          searchParams.set("isFeatured", String(params.isFeatured));
+        }
+
+        return `/public?${searchParams.toString()}`;
+      },
+      providesTags: (result, error) => {
+        if (error) return [{ type: "BlogPosts", id: "LIST" }];
+        const tags: any[] = [{ type: "BlogPosts", id: "LIST" }];
+        result?.data?.forEach((d) =>
+          tags.push({ type: "BlogPosts", id: d.id })
+        );
+        return tags;
+      },
+      transformResponse: (response: any): PaginatedBlogPosts => {
+        const mapItem = (it: any) => {
+          if (!it) return it;
+          return {
+            ...it,
+            id: it.id ?? it._id ?? String(Math.random()).slice(2),
+          } as IBlogPost;
+        };
+
+        if (response?.data) {
+          const arr = Array.isArray(response.data)
+            ? response.data.map(mapItem)
+            : [];
+          const page = Math.max(response.page || 1, 1);
+          const total = Math.max(response.total ?? arr.length, 0);
+          const totalPages = Math.max(
+            response.totalPages ??
+              Math.ceil(total / (response.limit ?? (arr.length || 1))),
+            0
+          );
+          return { data: arr, page, total, totalPages };
+        }
+
+        if (Array.isArray(response)) {
+          const arr = response.map(mapItem);
+          return {
+            data: arr,
+            page: 1,
+            total: arr.length,
+            totalPages: arr.length > 0 ? 1 : 0,
+          };
+        }
+
+        return { data: [], page: 1, total: 0, totalPages: 0 };
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch blog posts" };
+      },
+    }),
+    fetchTrendingPosts: build.query<IBlogPost[], TrendingPostsParams>({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        if (params.limit) searchParams.set("limit", String(params.limit));
+        if (params.category) searchParams.set("category", params.category);
+        if (params.timeRange) searchParams.set("timeRange", params.timeRange);
+        return `/trending?${searchParams.toString()}`;
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              { type: "BlogPosts", id: "TRENDING" },
+              ...result.map((post) => ({
+                type: "BlogPosts" as const,
+                id: post.id,
+              })),
+            ]
+          : [{ type: "BlogPosts", id: "TRENDING" }],
+      transformResponse: (response: any): IBlogPost[] => {
+        if (response?.data && Array.isArray(response.data)) {
+          return response.data.map((item: any) => ({
+            ...item,
+            id: item.id ?? item._id ?? String(Math.random()).slice(2),
+          }));
+        }
+        return [];
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch trending posts" };
+      },
+    }),
+    fetchTopAuthors: build.query<ITopAuthor[], TopAuthorsParams>({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        if (params.limit) searchParams.set("limit", String(params.limit));
+        if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+        return `/authors/top?${searchParams.toString()}`;
+      },
+      providesTags: [{ type: "BlogPosts", id: "TOP_AUTHORS" }],
+      transformResponse: (response: any): ITopAuthor[] => {
+        if (response?.data && Array.isArray(response.data)) {
+          return response.data;
+        }
+        return [];
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch top authors" };
+      },
+    }),
+    fetchPostCategories: build.query<PaginatedCategories, FetchParams>({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        const page = Math.max(params.page || 1, 1);
+        const limit = Math.min(Math.max(params.limit || 50, 1), 240);
+        searchParams.set("page", String(page));
+        searchParams.set("limit", String(limit));
+        if (params.search?.trim() && params.search.trim().length >= 2) {
+          searchParams.set("search", params.search.trim());
+        }
+        if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+        if (params.current) searchParams.set("current", params.current);
+        return `/category?${searchParams.toString()}`;
+      },
+      providesTags: (result, error) => {
+        if (error) return [{ type: "Categories", id: "LIST" }];
+        const tags: any[] = [{ type: "Categories", id: "LIST" }];
+        result?.data?.forEach((d) =>
+          tags.push({ type: "Categories", id: d.id })
+        );
+        return tags;
+      },
+      transformResponse: (response: any): PaginatedCategories => {
+        const mapItem = (it: any) => {
+          if (!it) return it;
+          return {
+            ...it,
+            id: it.id ?? it._id ?? String(Math.random()).slice(2),
+          } as ICategory;
+        };
+
+        if (response?.data) {
+          const arr = Array.isArray(response.data)
+            ? response.data.map(mapItem)
+            : [];
+          const page = Math.max(response.page || 1, 1);
+          const total = Math.max(response.total ?? arr.length, 0);
+          const totalPages = Math.max(
+            response.totalPages ??
+              Math.ceil(total / (response.limit ?? (arr.length || 1))),
+            0
+          );
+          return { data: arr, page, total, totalPages };
+        }
+
+        if (Array.isArray(response)) {
+          const arr = response.map(mapItem);
+          return {
+            data: arr,
+            page: 1,
+            total: arr.length,
+            totalPages: arr.length > 0 ? 1 : 0,
+          };
+        }
+
+        return { data: [], page: 1, total: 0, totalPages: 0 };
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return { message: "Failed to fetch categories" };
+      },
+    }),
     getBlogPostById: build.query<IBlogPost, string>({
       query: (id) => `/${id}`,
       providesTags: (_result, _error, id) => [
@@ -953,6 +1180,12 @@ export const blogPostApi = createApi({
 
 export const {
   useFetchBlogPostsQuery,
+  useFetchPublicBlogPostsQuery,
+  useFetchPostCategoriesQuery,
+  useFetchTrendingPostsQuery,
+  useLazyFetchTrendingPostsQuery,
+  useFetchTopAuthorsQuery,
+  useLazyFetchTopAuthorsQuery,
   useGetBlogPostByIdQuery,
   useGetBlogPostBySlugQuery,
   useLazyGetBlogPostByIdQuery,

@@ -172,6 +172,9 @@ const BlogPostSchema: Schema = new Schema(
 BlogPostSchema.index({ status: 1, publishedAt: -1 });
 BlogPostSchema.index({ tags: 1 });
 BlogPostSchema.index({ "seo.keywords": 1 });
+BlogPostSchema.index({ views: -1, publishedAt: -1 });
+BlogPostSchema.index({ author: 1, status: 1, isActive: 1 });
+BlogPostSchema.index({ isFeatured: 1, status: 1, publishedAt: -1 });
 
 /* Pre-save hook example: auto-set publishedAt when status changes to published */
 BlogPostSchema.pre<IBlogPost>("save", function (next) {

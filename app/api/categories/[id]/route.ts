@@ -97,6 +97,13 @@ export async function PATCH(
     if (!itemData) {
       return NextResponse.json({ error: "Data not found" }, { status: 404 });
     }
+    // Doesnot Exist
+    if (itemData.addedBy.toString() !== user.id && user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Not Enough Access!" },
+        { status: 404 }
+      );
+    }
     // SuperAdmin Can Update Demo Data , others Can't
     if (itemData.demo) {
       const superAdmin = isSuperAdmin(user);
