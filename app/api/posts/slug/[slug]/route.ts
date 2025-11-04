@@ -5,7 +5,6 @@ import "@/models/categories.model";
 import connectDB from "@/lib/connectDB";
 
 // GET blog post by slug (public access)
-
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }

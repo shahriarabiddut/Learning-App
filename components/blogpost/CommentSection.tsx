@@ -8,14 +8,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 import { useAddCommentMutation } from "@/lib/redux-features/blogPost/blogPostApi";
 import { IComment } from "@/models/blogPost.model";
-import { Loader2, MessageSquare, Send } from "lucide-react";
-import { use, useState } from "react";
+import { Loader2, MessageSquare, Send, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface CommentsSectionProps {
   postId: string;
   comments?: IComment[];
   allowComments?: boolean;
+}
+
+interface PendingComment {
+  name: string;
+  email?: string;
+  body: string;
+  createdAt: Date;
 }
 
 function formatCommentDate(date: Date | string | undefined): string {
@@ -51,15 +58,29 @@ export function CommentsSection({
   allowComments = true,
 }: CommentsSectionProps) {
   const [addComment, { isLoading }] = useAddCommentMutation();
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     body: "",
   });
-  const { data: session } = useSession();
-  console.log("Session Data:", session);
+  const [pendingComments, setPendingComments] = useState<PendingComment[]>([]);
+
+  // Auto-fill form data when session is available
+  useEffect(() => {
+    if (session?.user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: session.user.name || "",
+        email: session.user.email || "",
+      }));
+    }
+  }, [session]);
+
   // Filter only approved comments
   const approvedComments = comments.filter((comment) => comment.approved);
+
+  const isLoggedIn = !!session?.user;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +91,15 @@ export function CommentsSection({
     }
 
     try {
+      // Add to pending comments immediately
+      const newPendingComment: PendingComment = {
+        name: formData.name.trim(),
+        email: formData.email.trim() || undefined,
+        body: formData.body.trim(),
+        createdAt: new Date(),
+      };
+      setPendingComments((prev) => [...prev, newPendingComment]);
+
       await addComment({
         postId,
         comment: {
@@ -82,8 +112,15 @@ export function CommentsSection({
       toast.success(
         "Comment submitted successfully! It will appear after approval."
       );
-      setFormData({ name: "", email: "", body: "" });
+
+      // Only clear the body field, keep name and email for logged-in users
+      setFormData((prev) => ({
+        ...prev,
+        body: "",
+      }));
     } catch (error) {
+      // Remove from pending if submission failed
+      setPendingComments((prev) => prev.slice(0, -1));
       console.error("Failed to add comment:", error);
       toast.error("Failed to submit comment. Please try again.");
     }
@@ -130,8 +167,8 @@ export function CommentsSection({
                   onChange={handleChange}
                   placeholder="Your name"
                   required
-                  disabled={isLoading}
-                  className="mt-1"
+                  disabled={isLoading || isLoggedIn}
+                  className="mt-1 disabled:opacity-60"
                 />
               </div>
               <div>
@@ -143,8 +180,8 @@ export function CommentsSection({
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="your.email@example.com"
-                  disabled={isLoading}
-                  className="mt-1"
+                  disabled={isLoading || isLoggedIn}
+                  className="mt-1 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -185,7 +222,50 @@ export function CommentsSection({
         </CardContent>
       </Card>
 
-      {/* Comments List */}
+      {/* Pending Comments (Under Review) */}
+      {pendingComments.length > 0 && (
+        <div className="space-y-4 mb-6">
+          {pendingComments.map((comment, index) => (
+            <Card
+              key={`pending-${index}`}
+              className="border-l-4 border-l-yellow-500 bg-muted/30"
+            >
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-muted-foreground/20 to-muted-foreground/10 flex-shrink-0">
+                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground">
+                      {comment.name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-muted-foreground">
+                          {comment.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCommentDate(comment.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {comment.body}
+                    </p>
+                    <div className="flex items-center gap-2 mt-3 text-xs text-yellow-600 dark:text-yellow-500">
+                      <Clock className="w-3 h-3" />
+                      <span className="font-medium">
+                        Under review - Pending approval
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Approved Comments List */}
       {approvedComments.length > 0 ? (
         <div className="space-y-4">
           {approvedComments.map((comment, index) => (
