@@ -2,12 +2,15 @@ import BlogPost from "@/models/blogPost.model";
 import { NextRequest, NextResponse } from "next/server";
 import "@/models/users.model";
 import "@/models/categories.model";
+import connectDB from "@/lib/connectDB";
 
 // GET blog post by slug (public access)
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) {
+  await connectDB();
   try {
     const params = await context.params;
     const { searchParams } = new URL(request.url);
@@ -35,12 +38,27 @@ export async function GET(
       );
     }
 
+    // Increment views atomically if enabled (default behavior) - async/non-blocking
+    const viewIncrementPromise = (async () => {
+      try {
+        const updatedPost = await BlogPost.findByIdAndUpdate(
+          post.id || post._id,
+          { $inc: { views: 1 } },
+          { new: true, select: "views" }
+        ).lean();
+        return updatedPost;
+      } catch (error) {
+        console.error("Failed to increment views:", error);
+        return null;
+      }
+    })();
+
     // Fetch related posts asynchronously (non-blocking)
     const relatedPostsPromise = (async () => {
       try {
         // Build query to find related posts
         const query: any = {
-          _id: { $ne: post._id }, // Exclude current post - IMPORTANT FIX
+          _id: { $ne: post._id }, // Exclude current post
           slug: { $ne: post.slug }, // Extra safety to exclude current post by slug
           status: "published",
           isActive: true,
@@ -104,8 +122,14 @@ export async function GET(
       }
     })();
 
-    // Wait for related posts to be fetched
-    const relatedPosts = await relatedPostsPromise;
+    // Wait for both operations to complete
+    const [updatedViewCount, relatedPosts] = await Promise.all([
+      viewIncrementPromise,
+      relatedPostsPromise,
+    ]);
+
+    // Use the updated view count if increment was performed
+    const currentViews = updatedViewCount?.views ?? post.views;
 
     const transformedPost = {
       id: post._id.toString(),
@@ -132,7 +156,7 @@ export async function GET(
       seo: post.seo,
       allowComments: post.allowComments,
       comments: post.comments?.filter((comment: any) => comment.approved),
-      views: post.views,
+      views: currentViews, // Return the incremented view count
       readingTime: post.readingTime,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,

@@ -670,30 +670,6 @@ export const blogPostApi = createApi({
       },
     }),
 
-    // Increment post views
-    incrementPostViews: build.mutation<{ views: number }, string>({
-      query: (id) => ({ url: `/${id}/views`, method: "POST" }),
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
-        const patchAction = optimisticListPatch(
-          blogPostApi.util,
-          "getBlogPostById",
-          id,
-          (draft: IBlogPost | undefined) => {
-            if (draft) {
-              draft.views = (draft.views || 0) + 1;
-            }
-          }
-        );
-        const patchResult = dispatch(patchAction);
-
-        try {
-          await queryFulfilled;
-        } catch {
-          patchResult.undo();
-        }
-      },
-    }),
-
     // Publish a post
     publishBlogPost: build.mutation<IBlogPost, string>({
       query: (id) => ({ url: `/${id}/publish`, method: "POST" }),
@@ -840,6 +816,70 @@ export const blogPostApi = createApi({
           return parsed?.error ?? null;
         }
         return "Failed to delete comment!";
+      },
+    }),
+
+    // Get all comments for a post
+    fetchPostComments: build.query<
+      { comments: any[]; allowComments: boolean },
+      string
+    >({
+      query: (postId) => `/${postId}/comments`,
+      providesTags: (result, error, postId) => [
+        { type: "BlogPosts", id: postId },
+      ],
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return "Failed to fetch comments!";
+      },
+    }),
+
+    // Bulk approve/reject comments
+    bulkUpdateComments: build.mutation<
+      { message: string; updatedCount: number },
+      { postId: string; commentIds: string[]; approved: boolean }
+    >({
+      query: ({ postId, commentIds, approved }) => ({
+        url: `/${postId}/comments/bulk`,
+        method: "PATCH",
+        body: { commentIds, approved },
+      }),
+      invalidatesTags: (result, error, { postId }) => [
+        { type: "BlogPosts", id: postId },
+        { type: "BlogPostDetail", id: postId },
+      ],
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return "Failed to bulk update comments!";
+      },
+    }),
+
+    // Bulk delete comments
+    bulkDeleteComments: build.mutation<
+      { message: string; deletedCount: number },
+      { postId: string; commentIds: string[] }
+    >({
+      query: ({ postId, commentIds }) => ({
+        url: `/${postId}/comments/bulk`,
+        method: "DELETE",
+        body: { commentIds },
+      }),
+      invalidatesTags: (result, error, { postId }) => [
+        { type: "BlogPosts", id: postId },
+        { type: "BlogPostDetail", id: postId },
+      ],
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          const parsed = safeParse<{ error?: string }>(response.data);
+          return parsed?.error ?? null;
+        }
+        return "Failed to bulk delete comments!";
       },
     }),
 
@@ -1193,7 +1233,6 @@ export const {
   useAddBlogPostMutation,
   useUpdateBlogPostMutation,
   useDeleteBlogPostMutation,
-  useIncrementPostViewsMutation,
   usePublishBlogPostMutation,
   useAddCommentMutation,
   useUpdateCommentStatusMutation,
@@ -1208,4 +1247,7 @@ export const {
   useFetchPostsByCategoryQuery,
   useLazyFetchFeaturedPostsQuery,
   useLazyFetchPostsByCategoryQuery,
+  useFetchPostCommentsQuery,
+  useBulkUpdateCommentsMutation,
+  useBulkDeleteCommentsMutation,
 } = blogPostApi;

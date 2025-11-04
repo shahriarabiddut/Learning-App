@@ -7,7 +7,6 @@ import RichTextDisplay from "@/components/shared/RichTextDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useIncrementPostViewsMutation } from "@/lib/redux-features/blogPost/blogPostApi";
 import { IBlogPost } from "@/models/blogPost.model";
 import { Calendar, Clock, Eye, Share2, Tag, User } from "lucide-react";
 import Image from "next/image";
@@ -51,16 +50,6 @@ function formatFullDate(date: string | Date | undefined): string {
 export function BlogPostView({ initialPost }: BlogPostViewProps) {
   const post = initialPost;
   const relatedPosts = post.relatedPosts || [];
-
-  // Increment views
-  const [incrementViews] = useIncrementPostViewsMutation();
-
-  // Increment view count when post loads
-  useEffect(() => {
-    if (post.id) {
-      incrementViews(post.id);
-    }
-  }, [post.id, incrementViews]);
 
   // Handle share
   const handleShare = async () => {

@@ -3,13 +3,10 @@ import { PERMISSIONS } from "@/lib/middle/permissions";
 import Category from "@/models/categories.model";
 import BlogPost from "@/models/blogPost.model";
 import { NextRequest, NextResponse } from "next/server";
+import connectDB from "@/lib/connectDB";
 
 export async function GET(request: NextRequest) {
-  const user = await AuthenticatedorNot(request, {
-    checkPermission: true,
-    Permission: PERMISSIONS.VIEW_CATEGORIES,
-  });
-  if (user instanceof NextResponse) return user;
+  await connectDB();
 
   try {
     let query: any = {};

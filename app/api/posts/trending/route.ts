@@ -1,9 +1,11 @@
+import connectDB from "@/lib/connectDB";
 import BlogPost from "@/models/blogPost.model";
 import "@/models/categories.model";
 import "@/models/users.model";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
+  await connectDB();
   try {
     const { searchParams } = new URL(request.url);
 

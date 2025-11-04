@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { DeleteConfirmationModal } from "@/components/shared/DeleteConfirmationModal";
 import { FaStar } from "react-icons/fa";
 import RichTextDisplay from "../shared/RichTextDisplay";
+import { ChunkErrorBoundaryWithSuspense } from "../shared/EntitiesOfPages/ChunkErrorBoundaryWithSuspense";
+import { CommentsModal } from "./CommentsModal";
 
 interface BlogPostModalProps {
   viewModalOpen: boolean;
@@ -47,6 +49,7 @@ export const BlogPostModal = ({
 }: BlogPostModalProps) => {
   const [deleteBlogPost] = useDeleteBlogPostMutation();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   // Delete handler
   const handleConfirmDelete = async () => {
@@ -305,17 +308,6 @@ export const BlogPostModal = ({
                     )}
                 </div>
               )}
-
-              {/* Content Preview */}
-              {selectedBlogPost.content && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Content Preview
-                  </h3>
-                  <RichTextDisplay content={selectedBlogPost.content} />
-                </div>
-              )}
-
               {/* Timestamps */}
               <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-4 border-t">
                 <div>
@@ -330,6 +322,9 @@ export const BlogPostModal = ({
 
               {/* Action Buttons */}
               <div className="flex justify-end items-center gap-3 pt-4">
+                <Button variant="outline" onClick={() => setCommentsOpen(true)}>
+                  Comments
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setViewModalOpen(false)}
@@ -351,7 +346,14 @@ export const BlogPostModal = ({
           )}
         </DialogContent>
       </Dialog>
-
+      <ChunkErrorBoundaryWithSuspense>
+        <CommentsModal
+          open={commentsOpen}
+          onOpenChange={setCommentsOpen}
+          postId={selectedBlogPost?.id || ""}
+          postTitle={selectedBlogPost?.title || "N/A"}
+        />
+      </ChunkErrorBoundaryWithSuspense>
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationModal
         open={deleteDialogOpen}

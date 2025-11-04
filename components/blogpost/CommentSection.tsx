@@ -5,10 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 import { useAddCommentMutation } from "@/lib/redux-features/blogPost/blogPostApi";
 import { IComment } from "@/models/blogPost.model";
 import { Loader2, MessageSquare, Send } from "lucide-react";
-import { useState } from "react";
+import { use, useState } from "react";
 import { toast } from "sonner";
 
 interface CommentsSectionProps {
@@ -55,7 +56,8 @@ export function CommentsSection({
     email: "",
     body: "",
   });
-
+  const { data: session } = useSession();
+  console.log("Session Data:", session);
   // Filter only approved comments
   const approvedComments = comments.filter((comment) => comment.approved);
 

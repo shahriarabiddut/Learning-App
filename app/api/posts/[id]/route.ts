@@ -99,15 +99,6 @@ export async function PATCH(
     const id = params.id;
     const body = await request.json();
 
-    // For partial updates, we don't need full validation
-    // const validation = blogPostSchema.partial().safeParse(body);
-    // if (!validation.success) {
-    //   return NextResponse.json(
-    //     { error: validation.error.errors },
-    //     { status: 400 }
-    //   );
-    // }
-
     // Last Check
     const postData = await BlogPost.findById(id);
 

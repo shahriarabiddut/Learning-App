@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import BlogPost from "@/models/blogPost.model";
+import connectDB from "@/lib/connectDB";
 
 export async function GET(request: NextRequest) {
+  await connectDB();
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "3");

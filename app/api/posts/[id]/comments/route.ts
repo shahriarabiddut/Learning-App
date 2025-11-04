@@ -1,79 +1,98 @@
+import { AuthenticatedorNot } from "@/app/api/server/route";
+import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
 import { NextRequest, NextResponse } from "next/server";
-import mongoose from "mongoose";
 import "@/models/users.model";
-import "@/models/categories.model";
-import { commentSchema } from "@/schemas/blogPostSchema";
+import connectDB from "@/lib/connectDB";
 
-// ADD COMMENT (public endpoint - no authentication required)
+// GET all comments for a post
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
+  const user = await AuthenticatedorNot(request, {
+    checkPermission: true,
+    Permission: PERMISSIONS.VIEW_POSTS,
+    checkValidId: true,
+    IDtoCheck: params.id,
+  });
+  if (user instanceof NextResponse) return user;
+
+  try {
+    const post = await BlogPost.findById(params.id)
+      .select("comments allowComments")
+      .lean();
+
+    if (!post) {
+      return NextResponse.json(
+        { error: "Blog post not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      comments: post.comments || [],
+      allowComments: post.allowComments,
+    });
+  } catch (error) {
+    console.error("Failed to fetch comments:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch comments" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Add a new comment (public endpoint)
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
+  await connectDB();
   try {
-    const params = await context.params;
-    const id = params.id;
-
-    // Validate ID format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { error: "Invalid post ID format" },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
-    const validation = commentSchema.safeParse(body);
+    const { name, email, body: commentBody } = body;
 
-    if (!validation.success) {
+    if (!name || !commentBody) {
       return NextResponse.json(
-        { error: validation.error.errors },
+        { error: "Name and comment body are required" },
         { status: 400 }
       );
     }
 
-    const post = await BlogPost.findById(id);
+    const post = await BlogPost.findById(params.id);
 
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Blog post not found" },
+        { status: 404 }
+      );
     }
 
-    // Check if comments are allowed
     if (!post.allowComments) {
       return NextResponse.json(
-        { error: "Comments are not allowed on this post" },
+        { error: "Comments are disabled for this post" },
         { status: 403 }
       );
     }
 
-    // Check if post is published
-    if (post.status !== "published") {
-      return NextResponse.json(
-        { error: "Cannot comment on unpublished posts" },
-        { status: 403 }
-      );
-    }
-
-    // Add comment
-    post.comments.push({
-      ...validation.data,
-      approved: false, // Comments need approval by default
+    const newComment = {
+      name,
+      email: email || undefined,
+      body: commentBody,
+      approved: false, // Default to not approved
       createdAt: new Date(),
-    } as any);
+    };
 
+    post.comments.push(newComment);
     await post.save();
 
-    const updatedPost = await BlogPost.findById(id)
-      .populate({
-        path: "author",
-        select: "name email",
-      })
-      .populate({
-        path: "categories",
-        select: "name",
-      });
-
-    return NextResponse.json(updatedPost, { status: 201 });
+    return NextResponse.json({
+      message: "Comment added successfully (pending approval)",
+      comment: post.comments[post.comments.length - 1],
+    });
   } catch (error) {
     console.error("Failed to add comment:", error);
     return NextResponse.json(

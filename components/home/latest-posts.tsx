@@ -69,7 +69,7 @@ export default function LatestPosts() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data?.data?.map((post) => (
-              <Link key={post.id} href={`/blog/${post.slug || post.id}`}>
+              <Link key={post.id} href={`/post/${post.slug || post.id}`}>
                 <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden p-0">
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
                     <Image
