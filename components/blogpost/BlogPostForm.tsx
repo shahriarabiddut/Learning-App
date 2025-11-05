@@ -34,8 +34,8 @@ import { useFetchCategoriesQuery } from "@/lib/redux-features/categories/categor
 import { IBlogPost } from "@/models/blogPost.model";
 import { blogPostSchema } from "@/schemas/blogPostSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { X, Eye, EyeOff } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -43,17 +43,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
 interface BlogPostFormProps {
   postId?: string;
-  isFormOpen: boolean;
-  handleFormClose: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onComplete?: () => void;
 }
 
 type BlogPostFormValues = z.infer<typeof blogPostSchema>;
 
+// SEO Settings visibility type
+type SeoVisibility = {
+  seo: boolean;
+  social: boolean;
+};
+
+// Helper function to extract text from HTML
+const extractTextFromHtml = (html: string, maxLength: number = 160): string => {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  const text = tmp.textContent || tmp.innerText || "";
+  return text.slice(0, maxLength).trim();
+};
+
+// Load SEO settings from localStorage
+const loadSeoSettings = (): SeoVisibility => {
+  if (typeof window === "undefined") return { seo: false, social: false };
+  try {
+    const saved = localStorage.getItem("blogpost-seo-visibility");
+    return saved ? JSON.parse(saved) : { seo: false, social: false };
+  } catch {
+    return { seo: false, social: false };
+  }
+};
+
+// Save SEO settings to localStorage
+const saveSeoSettings = (settings: SeoVisibility) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("blogpost-seo-visibility", JSON.stringify(settings));
+  } catch (e) {
+    console.error("Failed to save SEO settings:", e);
+  }
+};
+
 export function BlogPostForm({
   postId,
-  isFormOpen,
-  handleFormClose,
+  open,
+  onOpenChange,
   onComplete,
 }: BlogPostFormProps) {
   // RTK Query hooks
@@ -84,6 +119,10 @@ export function BlogPostForm({
   const [tagInput, setTagInput] = useState("");
   const [readingTime, setReadingTime] = useState([5]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [seoVisibility, setSeoVisibility] = useState<SeoVisibility>(
+    loadSeoSettings()
+  );
+  const [autoFillEnabled, setAutoFillEnabled] = useState(true);
 
   const form = useForm<BlogPostFormValues>({
     resolver: zodResolver(blogPostSchema),
@@ -112,10 +151,61 @@ export function BlogPostForm({
     },
   });
 
-  // Handle post data when fetched successfully
+  // Get categories from RTK Query data
+  const categories = useMemo(
+    () => categoriesData?.data || [],
+    [categoriesData]
+  );
+
+  // Auto-generate slug from title
+  const generateSlug = useCallback((title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }, []);
+
+  // Reset form when dialog opens/closes or postId changes
   useEffect(() => {
-    if (postFetched && post) {
+    if (!open) {
+      // Reset form when closing
+      form.reset({
+        title: "",
+        slug: "",
+        excerpt: "",
+        content: "",
+        contentType: "html",
+        categories: [],
+        tags: [],
+        featuredImage: "",
+        status: "draft",
+        isActive: false,
+        isFeatured: false,
+        allowComments: true,
+        seo: {
+          title: "",
+          description: "",
+          keywords: [],
+          ogTitle: "",
+          ogDescription: "",
+          ogImage: "",
+        },
+        readingTime: 5,
+      });
+      setSelectedCategories([]);
+      setReadingTime([5]);
+      setTagInput("");
+      setAutoFillEnabled(true);
+    }
+  }, [open, form]);
+
+  // Handle post data when fetched successfully (for editing)
+  useEffect(() => {
+    if (postFetched && post && open && postId) {
       const data = post as IBlogPost;
+
+      // Disable auto-fill when editing
+      setAutoFillEnabled(false);
 
       form.reset({
         title: data.title,
@@ -146,7 +236,7 @@ export function BlogPostForm({
       );
       setReadingTime([data.readingTime || 5]);
     }
-  }, [postFetched, post, form]);
+  }, [postFetched, post, form, open, postId]);
 
   // Handle errors
   useEffect(() => {
@@ -160,14 +250,6 @@ export function BlogPostForm({
       toast.error("Failed to fetch post details");
     }
   }, [postError]);
-
-  // Auto-generate slug from title
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  };
 
   const onSubmit = async (data: BlogPostFormValues) => {
     try {
@@ -185,8 +267,7 @@ export function BlogPostForm({
       }
 
       if (onComplete) onComplete();
-      handleFormClose(false);
-      form.reset();
+      onOpenChange(false);
     } catch (error: any) {
       const errorMessage =
         error?.data?.error || error?.message || "Something went wrong!";
@@ -195,46 +276,70 @@ export function BlogPostForm({
   };
 
   // Handle tag addition
-  const addTag = () => {
+  const addTag = useCallback(() => {
     const trimmedTag = tagInput.trim();
     if (trimmedTag && !form.getValues("tags")?.includes(trimmedTag)) {
       const currentTags = form.getValues("tags") || [];
       form.setValue("tags", [...currentTags, trimmedTag]);
       setTagInput("");
     }
-  };
+  }, [tagInput, form]);
 
   // Handle tag removal
-  const removeTag = (tagToRemove: string) => {
-    const currentTags = form.getValues("tags") || [];
-    form.setValue(
-      "tags",
-      currentTags.filter((tag) => tag !== tagToRemove)
-    );
-  };
+  const removeTag = useCallback(
+    (tagToRemove: string) => {
+      const currentTags = form.getValues("tags") || [];
+      form.setValue(
+        "tags",
+        currentTags.filter((tag) => tag !== tagToRemove)
+      );
+    },
+    [form]
+  );
+
+  // Toggle SEO visibility
+  const toggleSeoVisibility = useCallback((type: "seo" | "social" | "both") => {
+    setSeoVisibility((prev) => {
+      let newVisibility: SeoVisibility;
+
+      if (type === "both") {
+        const allVisible = prev.seo && prev.social;
+        newVisibility = { seo: !allVisible, social: !allVisible };
+      } else if (type === "seo") {
+        newVisibility = { ...prev, seo: !prev.seo };
+      } else {
+        newVisibility = { ...prev, social: !prev.social };
+      }
+
+      saveSeoSettings(newVisibility);
+      return newVisibility;
+    });
+  }, []);
 
   // Loading state
   const isLoading = categoriesLoading || (postId && postLoading);
 
   if (isLoading) {
-    return <SharedLoader />;
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <SharedLoader />
+        </DialogContent>
+      </Dialog>
+    );
   }
 
-  // Get categories from RTK Query data
-  const categories = categoriesData?.data || [];
+  const showSeoSection = seoVisibility.seo || seoVisibility.social;
 
   return (
-    <Dialog open={isFormOpen} onOpenChange={handleFormClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:w-[90vw] lg:w-[90vw] xl:w-[85vw] min-w-[80vw] max-w-7xl max-h-[95vh] overflow-auto p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
         {/* Header */}
-        <div className="sticky h-full z-10 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 px-6 py-5">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 px-6 py-5">
           <DialogHeader className="space-y-2 relative">
             <div
               className="absolute top-0 right-0 cursor-pointer"
-              onClick={() => {
-                handleFormClose(false);
-                form.reset();
-              }}
+              onClick={() => onOpenChange(false)}
             >
               <X className="w-6 h-6" />
             </div>
@@ -256,9 +361,9 @@ export function BlogPostForm({
               </div>
               <div>
                 <DialogTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {post ? `Edit Blog Post` : "Create New Blog Post"}
+                  {postId ? `Edit Blog Post` : "Create New Blog Post"}
                 </DialogTitle>
-                {post && (
+                {postId && post && (
                   <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mt-1">
                     {post.title}
                   </p>
@@ -269,14 +374,14 @@ export function BlogPostForm({
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto -mt-4">
+        <div className="flex-1 overflow-y-auto">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-2 bg-gray-50 dark:bg-gray-900 p-1 "
+              className="space-y-2 bg-gray-50 dark:bg-gray-900 p-1"
             >
               {/* Basic Information Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
                   <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                     <svg
@@ -298,7 +403,7 @@ export function BlogPostForm({
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <FormField
                     control={form.control}
                     name="title"
@@ -310,16 +415,18 @@ export function BlogPostForm({
                         <FormControl>
                           <Input
                             placeholder="Enter post title"
-                            className="h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                            className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
                             {...field}
                             onChange={(e) => {
                               field.onChange(e);
-                              // Auto-generate slug if not manually edited
-                              if (!postId || !post?.slug) {
+                              console.log();
+                              if (!postId) {
                                 form.setValue(
                                   "slug",
                                   generateSlug(e.target.value)
                                 );
+                                form.setValue("seo.title", e.target.value);
+                                form.setValue("seo.ogTitle", e.target.value);
                               }
                             }}
                           />
@@ -328,184 +435,165 @@ export function BlogPostForm({
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="slug"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          URL Slug <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="post-url-slug"
-                            className="h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
-                            {...field}
-                          />
-                        </FormControl>
-                        {/* <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
-                          Used in the URL: /blog/{field.value || "your-slug"}
-                        </FormDescription> */}
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Status <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                            <SelectItem
-                              value="draft"
-                              className="focus:bg-gray-100 dark:focus:bg-gray-700"
-                            >
-                              Draft
-                            </SelectItem>
-                            <SelectItem
-                              value="published"
-                              className="focus:bg-gray-100 dark:focus:bg-gray-700"
-                            >
-                              Published
-                            </SelectItem>
-                            <SelectItem
-                              value="archived"
-                              className="focus:bg-gray-100 dark:focus:bg-gray-700"
-                            >
-                              Archived
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
                 </div>
-
-                {/* Excerpt */}
-                <FormField
-                  control={form.control}
-                  name="excerpt"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Excerpt
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Brief summary of your post..."
-                          className="min-h-[100px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
-                        This will be displayed in post previews and search
-                        results
-                      </FormDescription>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Status Toggles */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="isActive"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Visibility
-                        </FormLabel>
-                        <div className="h-12 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4">
-                          <div className="flex items-center gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  {/* Excerpt */}
+                  <div className="grid grid-rows-1 col-span-1 md:col-span-3 space-y-2">
+                    <FormField
+                      control={form.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300"></FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="post-url-slug"
+                              className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="excerpt"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Excerpt
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Brief summary of your post..."
+                              className="min-h-[100px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
+                            This will be displayed in post previews and search
+                            results
+                          </FormDescription>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  {/* Status Toggles */}
+                  <div className="grid grid-rows-1 gap-1 col-span-1">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                              />
+                              <SelectTrigger className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                              Active
-                            </FormLabel>
+                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                              <SelectItem
+                                value="draft"
+                                className="focus:bg-gray-100 dark:focus:bg-gray-700"
+                              >
+                                Draft
+                              </SelectItem>
+                              <SelectItem
+                                value="published"
+                                className="focus:bg-gray-100 dark:focus:bg-gray-700"
+                              >
+                                Published
+                              </SelectItem>
+                              <SelectItem
+                                value="archived"
+                                className="focus:bg-gray-100 dark:focus:bg-gray-700"
+                              >
+                                Archived
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4">
+                            <div className="flex items-center gap-3">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                Visible
+                              </FormLabel>
+                            </div>
                           </div>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="isFeatured"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-4">
+                            <div className="flex items-center gap-3">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-yellow-700 dark:text-yellow-300 cursor-pointer">
+                                Featured Post
+                              </FormLabel>
+                            </div>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="isFeatured"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Featured
-                        </FormLabel>
-                        <div className="h-12 flex items-center justify-center rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-4">
-                          <div className="flex items-center gap-3">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-medium text-yellow-700 dark:text-yellow-300 cursor-pointer">
-                              Featured Post
-                            </FormLabel>
+                    <FormField
+                      control={form.control}
+                      name="allowComments"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4">
+                            <div className="flex items-center gap-3">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-medium text-blue-700 dark:text-blue-300 cursor-pointer">
+                                Allow Comments
+                              </FormLabel>
+                            </div>
                           </div>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="allowComments"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Comments
-                        </FormLabel>
-                        <div className="h-12 flex items-center justify-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4">
-                          <div className="flex items-center gap-3">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-medium text-blue-700 dark:text-blue-300 cursor-pointer">
-                              Allow Comments
-                            </FormLabel>
-                          </div>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Content Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
                   <div className="w-6 h-6 rounded-md bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
                     <svg
@@ -533,10 +621,27 @@ export function BlogPostForm({
                   render={({ field }) => (
                     <FormItem className="space-y-2">
                       <FormControl>
-                        <div className="min-h-[400px] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="h-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
                           <RichTextEditor
                             value={field.value || ""}
-                            onChange={field.onChange}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              console.log();
+                              if (!postId) {
+                                form.setValue(
+                                  "seo.description",
+                                  extractTextFromHtml(e, 160)
+                                );
+                                form.setValue(
+                                  "seo.ogDescription",
+                                  extractTextFromHtml(e, 160)
+                                );
+                                form.setValue(
+                                  "excerpt",
+                                  extractTextFromHtml(e, 160)
+                                );
+                              }
+                            }}
                           />
                         </div>
                       </FormControl>
@@ -547,7 +652,7 @@ export function BlogPostForm({
               </div>
 
               {/* Media & Categories Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
                   <div className="w-6 h-6 rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                     <svg
@@ -569,7 +674,7 @@ export function BlogPostForm({
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <FormField
                     control={form.control}
                     name="featuredImage"
@@ -580,9 +685,17 @@ export function BlogPostForm({
                         </FormLabel>
                         <ImageInput
                           value={field.value || ""}
-                          onChange={field.onChange}
-                          currentImageUrl={post?.featuredImage}
-                          showCurrentImage={!!post}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            console.log(e);
+                            if (!postId) {
+                              form.setValue("seo.ogImage", e);
+                            }
+                          }}
+                          currentImageUrl={
+                            postId && post ? post.featuredImage : undefined
+                          }
+                          showCurrentImage={!!postId && !!post}
                           placeholder="https://example.com/image.jpg"
                         />
                         <FormMessage className="text-red-500" />
@@ -737,151 +850,217 @@ export function BlogPostForm({
                 </div>
               </div>
 
-              {/* SEO Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6 shadow-sm">
-                <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
-                  <div className="w-6 h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <svg
-                      className="w-3 h-3 text-green-600 dark:text-green-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {/* SEO Section Toggle Buttons */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm">
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    type="button"
+                    variant={
+                      seoVisibility.seo && seoVisibility.social
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => toggleSeoVisibility("both")}
+                    className="flex items-center gap-2"
+                  >
+                    {seoVisibility.seo && seoVisibility.social ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                    Both Settings
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={seoVisibility.seo ? "default" : "outline"}
+                    onClick={() => toggleSeoVisibility("seo")}
+                    className="flex items-center gap-2"
+                  >
+                    {seoVisibility.seo ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                     SEO Settings
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="seo.title"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          SEO Title
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="SEO optimized title"
-                            className="h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
-                          Recommended: 50-60 characters
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={seoVisibility.social ? "default" : "outline"}
+                    onClick={() => toggleSeoVisibility("social")}
+                    className="flex items-center gap-2"
+                  >
+                    {seoVisibility.social ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
                     )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="seo.ogTitle"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Social Media Title
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Title for social sharing"
-                            className="h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="seo.description"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2 lg:col-span-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Meta Description
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Brief description for search engines..."
-                            className="min-h-[80px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
-                          Recommended: 150-160 characters
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="seo.ogDescription"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2 lg:col-span-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Social Media Description
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Description for social sharing..."
-                            className="min-h-[80px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="seo.ogImage"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2 lg:col-span-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Social Media Image URL
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="https://example.com/og-image.jpg"
-                            className="h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
-                          Recommended size: 1200x630px
-                        </FormDescription>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
+                    Social Media Settings
+                  </Button>
                 </div>
               </div>
 
+              {/* SEO Section - Conditionally Rendered */}
+              {showSeoSection && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
+                  <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
+                    <div className="w-6 h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <svg
+                        className="w-3 h-3 text-green-600 dark:text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {seoVisibility.seo && seoVisibility.social
+                        ? "SEO & Social Media Settings"
+                        : seoVisibility.seo
+                        ? "SEO Settings"
+                        : "Social Media Settings"}
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    {/* SEO Settings */}
+                    {seoVisibility.seo && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="seo.title"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                SEO Title
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="SEO optimized title (50-60 characters)"
+                                  className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
+                                {field.value?.length || 0}/60 characters
+                              </FormDescription>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="seo.description"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2 lg:col-span-2">
+                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Meta Description
+                              </FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Brief description for search engines..."
+                                  className="min-h-[80px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
+                                {field.value?.length || 0}/160 characters
+                                (Recommended: 150-160)
+                              </FormDescription>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+
+                    {/* Social Media Settings */}
+                    {seoVisibility.social && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="seo.ogTitle"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2 lg:col-span-2">
+                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Social Media Title
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Title for social sharing"
+                                  className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="seo.ogDescription"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2 lg:col-span-2">
+                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Social Media Description
+                              </FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Description for social sharing..."
+                                  className="min-h-[80px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
+                                {field.value?.length || 0}/160 characters
+                              </FormDescription>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="seo.ogImage"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2 lg:col-span-2">
+                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Social Media Image URL
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="https://example.com/og-image.jpg"
+                                  className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
+                                Recommended size: 1200x630px
+                              </FormDescription>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Form Actions */}
-              <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end gap-3 rounded-b-xl shadow-lg">
+              <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 rounded-b-xl shadow-lg">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    form.reset();
-                    handleFormClose(false);
-                  }}
-                  className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  onClick={() => onOpenChange(false)}
+                  className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 w-full sm:w-auto"
                   disabled={form.formState.isSubmitting}
                 >
                   <svg
@@ -902,7 +1081,7 @@ export function BlogPostForm({
                 <Button
                   type="submit"
                   disabled={form.formState.isSubmitting}
-                  className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
                 >
                   {form.formState.isSubmitting ? (
                     <>

@@ -82,7 +82,7 @@ export async function POST(
       name,
       email: email || undefined,
       body: commentBody,
-      approved: false, // Default to not approved
+      approved: null,
       createdAt: new Date(),
     };
 

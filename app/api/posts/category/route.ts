@@ -1,9 +1,7 @@
-import { AuthenticatedorNot } from "@/app/api/server/route";
-import { PERMISSIONS } from "@/lib/middle/permissions";
-import Category from "@/models/categories.model";
-import BlogPost from "@/models/blogPost.model";
-import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/connectDB";
+import BlogPost from "@/models/blogPost.model";
+import Category from "@/models/categories.model";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   await connectDB();

@@ -17,6 +17,7 @@ import {
   useUpdateCommentStatusMutation,
 } from "@/lib/redux-features/blogPost/blogPostApi";
 import {
+  Ban,
   CheckCircle,
   Clock,
   Mail,
@@ -42,18 +43,16 @@ interface Comment {
 interface CommentsManagementProps {
   postId: string;
   allowComments?: boolean;
-  onClose?: () => void;
 }
 
 export const CommentsManagement = ({
   postId,
   allowComments = true,
-  onClose,
 }: CommentsManagementProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedComments, setSelectedComments] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<
-    "all" | "approved" | "pending"
+    "all" | "pending" | "approved" | "rejected"
   >("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
@@ -81,7 +80,11 @@ export const CommentsManagement = ({
     if (filterStatus === "approved") {
       filtered = filtered.filter((c: Comment) => c.approved);
     } else if (filterStatus === "pending") {
-      filtered = filtered.filter((c: Comment) => !c.approved);
+      filtered = filtered.filter((c: Comment) => c.approved === null);
+    } else if (filterStatus === "rejected") {
+      filtered = filtered.filter(
+        (c: Comment) => c.approved !== null && !c.approved
+      );
     }
 
     // Search
@@ -239,16 +242,25 @@ export const CommentsManagement = ({
   // Stats
   const totalComments = comments.length;
   const approvedCount = comments.filter((c: Comment) => c.approved).length;
-  const pendingCount = totalComments - approvedCount;
+  const rejectedCount = comments.filter(
+    (c: Comment) => !c.approved && c.approved !== null
+  ).length;
+  const pendingCount = totalComments - approvedCount - rejectedCount;
 
   return (
     <>
       <div className="space-y-4">
         {/* Stats Bar */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="grid grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
           <div className="text-center">
             <div className="text-2xl font-bold">{totalComments}</div>
             <div className="text-xs text-muted-foreground">Total</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {pendingCount}
+            </div>
+            <div className="text-xs text-muted-foreground">Pending</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
@@ -257,10 +269,10 @@ export const CommentsManagement = ({
             <div className="text-xs text-muted-foreground">Approved</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {pendingCount}
+            <div className="text-2xl font-bold text-red-600">
+              {rejectedCount}
             </div>
-            <div className="text-xs text-muted-foreground">Pending</div>
+            <div className="text-xs text-muted-foreground">Rejected</div>
           </div>
         </div>
 
@@ -304,6 +316,13 @@ export const CommentsManagement = ({
               onClick={() => setFilterStatus("pending")}
             >
               Pending
+            </Button>
+            <Button
+              variant={filterStatus === "rejected" ? "destructive" : "outline"}
+              size="sm"
+              onClick={() => setFilterStatus("rejected")}
+            >
+              Rejected
             </Button>
           </div>
         </div>
@@ -415,23 +434,34 @@ export const CommentsManagement = ({
                             )}
                             <Badge
                               variant={
-                                comment.approved ? "secondaryGreen" : "outline"
+                                comment.approved === null
+                                  ? "outline"
+                                  : comment.approved
+                                  ? "secondaryGreen"
+                                  : "destructive"
                               }
                               className={
-                                comment.approved
+                                comment.approved === null
+                                  ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
+                                  : comment.approved
                                   ? ""
-                                  : "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                               }
                             >
-                              {comment.approved ? (
+                              {comment.approved === null ? (
+                                <>
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Pending
+                                </>
+                              ) : comment.approved ? (
                                 <>
                                   <CheckCircle className="w-3 h-3 mr-1" />
                                   Approved
                                 </>
                               ) : (
                                 <>
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Pending
+                                  <Ban className="w-3 h-3 mr-1" />
+                                  Rejected
                                 </>
                               )}
                             </Badge>
@@ -453,15 +483,36 @@ export const CommentsManagement = ({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {!comment.approved ? (
+                            {comment.approved === null ? (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUpdateStatus(comment._id, true)
+                                  }
+                                  className="text-green-600"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Approve
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUpdateStatus(comment._id, false)
+                                  }
+                                  className="text-orange-600"
+                                >
+                                  <XCircle className="w-4 h-4 mr-2" />
+                                  Reject
+                                </DropdownMenuItem>
+                              </>
+                            ) : comment.approved === true ? (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleUpdateStatus(comment._id, true)
+                                  handleUpdateStatus(comment._id, false)
                                 }
-                                className="text-green-600"
+                                className="text-orange-600"
                               >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Approve
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem

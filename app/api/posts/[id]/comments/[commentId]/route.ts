@@ -66,6 +66,7 @@ export async function PATCH(
 
     comment.approved = approved;
     post.updatedBy = user.id;
+    console.log(approved);
 
     await post.save();
 
@@ -78,8 +79,8 @@ export async function PATCH(
         path: "categories",
         select: "name",
       });
-
-    revalidatePath(`/blog/${post.slug}`);
+    console.log(updatedPost);
+    revalidatePath(`/post/${post.slug}`);
 
     return NextResponse.json(updatedPost);
   } catch (error) {

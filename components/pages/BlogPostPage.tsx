@@ -566,7 +566,8 @@ const BlogPostsContent = memo(() => {
           <ChunkErrorBoundaryWithSuspense>
             <BlogPostForm
               postId={editingPost?.id}
-              isFormOpen={isFormOpen}
+              open={isFormOpen}
+              onOpenChange={handleFormClose}
               handleFormClose={handleFormClose}
               onComplete={() => {
                 handleFormClose(false);

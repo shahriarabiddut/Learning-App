@@ -118,6 +118,8 @@ const DynamicFormRenderer = memo(
   }) => {
     if (!isOpen || !formType) return null;
     const FormComponent = formComponents[formType];
+
+    // Use 'open' prop instead of 'isFormOpen' and 'onOpenChange' instead of 'handleFormClose'
     return (
       <FormComponent open={isOpen} onOpenChange={onOpenChange} {...formProps} />
     );
@@ -300,19 +302,7 @@ export function DashboardXSidebar({ session }: SidebarProps) {
   const handleChildClick = useCallback(
     (child: any) => {
       if (child.action && child.form) {
-        const getFormProps = () => {
-          switch (child.form) {
-            case "doctor":
-              return { user: null, role: "doctor" };
-            case "patient":
-              return { user: null, role: "patient" };
-            case "employee":
-              return { user: null };
-            default:
-              return {};
-          }
-        };
-        openForm(child.form as FormType, getFormProps());
+        openForm(child.form as FormType);
       } else if (child.href) {
         router.push(child.href);
       }
