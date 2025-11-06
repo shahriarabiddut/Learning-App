@@ -9,6 +9,8 @@ interface UserActionsProps {
   showtoggleButtons: boolean;
   onToggleStatus: (id: string, currentStatus: boolean) => void;
   isLoading?: boolean;
+  canDelete: boolean;
+  canUpdate: boolean;
 }
 
 export const UserActions = ({
@@ -19,6 +21,8 @@ export const UserActions = ({
   showtoggleButtons = false,
   onToggleStatus,
   isLoading = false,
+  canDelete = false,
+  canUpdate = false,
 }: UserActionsProps) => {
   return (
     <div
@@ -28,15 +32,25 @@ export const UserActions = ({
     >
       <div className="flex space-x-1">
         <ActionButton action="view" onClick={onView} title="View User" />
-        <ActionButton action="edit" onClick={onEdit} title="Edit User" />
-        <ActionButton action="delete" onClick={onDelete} title="Delete User" />
+        {canUpdate && (
+          <ActionButton action="edit" onClick={onEdit} title="Edit User" />
+        )}
+        {canDelete && (
+          <ActionButton
+            action="delete"
+            onClick={onDelete}
+            title="Delete User"
+          />
+        )}
       </div>
 
-      <ToggleStatus
-        item={user}
-        onToggleStatus={onToggleStatus}
-        isLoading={isLoading}
-      />
+      {canUpdate && (
+        <ToggleStatus
+          item={user}
+          onToggleStatus={onToggleStatus}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 };

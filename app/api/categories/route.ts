@@ -1,10 +1,10 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Category from "@/models/categories.model";
-import { revalidatePath } from "next/cache";
-import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot, isSuperAdmin } from "../server/route";
 import { User } from "@/models/users.model";
 import { categorySchema } from "@/schemas/categorySchema";
+import { AuthenticatedorNot } from "@/services/dbAndPermission.service";
+import { revalidatePath } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
 
   try {
     let query: any = {};
-    const superAdmin = isSuperAdmin(user);
 
     const { searchParams } = new URL(request.url);
     let page = parseInt(searchParams.get("page") || "1");

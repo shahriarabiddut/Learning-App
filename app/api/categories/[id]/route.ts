@@ -1,4 +1,7 @@
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Category from "@/models/categories.model";
 import { categorySchema } from "@/schemas/categorySchema";

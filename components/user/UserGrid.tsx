@@ -19,6 +19,8 @@ interface UserGridProps {
   handleBulkStatusToggle: (ids: string[], targetStatus: boolean) => void;
   canManage: boolean;
   isLoading: boolean;
+  canDelete: boolean;
+  canUpdate: boolean;
 }
 
 export const UserGrid = ({
@@ -32,6 +34,8 @@ export const UserGrid = ({
   handleBulkStatusToggle,
   canManage = false,
   isLoading = false,
+  canDelete = false,
+  canUpdate = false,
 }: UserGridProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
@@ -110,44 +114,59 @@ export const UserGrid = ({
   return (
     <>
       {selectedUsers.length > 0 && canManage && (
-        <div className="flex items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3">
-          <span className="text-sm font-medium">
-            {selectedUsers.length} selected
-          </span>
+        <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-blue-900">
+              {selectedUsers.length}{" "}
+              {selectedUsers.length === 1 ? "user" : "users"} selected
+            </span>
 
-          <Button variant="outline" size="sm" onClick={toggleSelectAll}>
-            {selectedUsers.length === users.length
-              ? "Deselect all"
-              : "Select all"}
-          </Button>
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSelectAll}
+                className="text-xs sm:text-sm"
+              >
+                {selectedUsers.length === users.length
+                  ? "Deselect all"
+                  : "Select all"}
+              </Button>
+              {canUpdate && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusToggleClick(true)}
+                    className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 text-xs sm:text-sm"
+                  >
+                    <FaCheckCircle className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">Activate</span>
+                  </Button>
 
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDeleteClick}
-          >
-            Delete selected
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => handleBulkStatusToggleClick(false)}
-            className="bg-gray-900 text-white hover:bg-red-500 gap-1 dark:bg-red-900 dark:hover:bg-red-700"
-          >
-            <FaBan className="h-3 w-3" />
-            Deactivate
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleBulkStatusToggleClick(true)}
-            className="bg-green-200 text-green-800 hover:bg-green-400 hover:text-white gap-1 dark:bg-green-900 dark:text-green-100 dark:hover:bg-green-700"
-          >
-            <FaCheckCircle className="h-4 w-4" />
-            Activate
-          </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusToggleClick(false)}
+                    className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 text-xs sm:text-sm"
+                  >
+                    <FaBan className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">Deactivate</span>
+                  </Button>
+                </>
+              )}
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDeleteClick}
+                  className="text-xs sm:text-sm"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -218,6 +237,8 @@ export const UserGrid = ({
                   handleToggleStatusClick(user.id, user.isActive)
                 }
                 isLoading={isLoading}
+                canDelete={canDelete}
+                canUpdate={canUpdate}
               />
             )}
           </Card>

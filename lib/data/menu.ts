@@ -12,21 +12,21 @@ export const NAV_LINKS = [
   {
     name: "Users",
     icon: FaUsers,
-    permission: PERMISSIONS.MANAGE_USERS,
+    permission: [PERMISSIONS.VIEW_USERS, PERMISSIONS.ADD_USERS],
     children: [
       {
         id: "users",
         name: "All Users",
         href: "/dashboard/users",
         icon: FaUsers,
-        permission: PERMISSIONS.MANAGE_USERS,
+        permission: PERMISSIONS.VIEW_USERS,
       },
       {
         id: "add-user",
         name: "Add New User",
         icon: FaPlus,
         href: "/dashboard/users/create",
-        permission: PERMISSIONS.MANAGE_USERS,
+        permission: PERMISSIONS.ADD_USERS,
         action: true,
         form: "user",
       },

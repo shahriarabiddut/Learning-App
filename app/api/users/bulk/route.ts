@@ -1,78 +1,92 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import { User } from "@/models/users.model";
 import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
+import { revalidatePath } from "next/cache";
+import Accounts from "@/models/accounts.model";
+import mongoose from "mongoose";
 
 export async function DELETE(request: NextRequest) {
-  const user = await AuthenticatedorNot(request, {
-    checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
-  });
-  if (user instanceof NextResponse) return user;
-
   const body = await request.json();
   const ids = body?.ids;
-
-  if (!ids || !Array.isArray(ids)) {
-    return NextResponse.json(
-      { error: "Request must include an 'ids' array" },
-      { status: 400 }
-    );
-  }
-
-  if (ids.some((id) => typeof id !== "string" || id.trim() === "")) {
-    return NextResponse.json(
-      { error: "All user IDs must be non-empty strings" },
-      { status: 400 }
-    );
-  }
-  // Is SuperAdmin
-  const superAdmin = isSuperAdmin(user);
-  if (!superAdmin) {
-    const usersToDelete = await User.find({ _id: { $in: ids } });
-
-    const hasAdmins = usersToDelete.some(
-      (userToDelete) => userToDelete.role === "admin"
-    );
-
-    if (hasAdmins) {
-      return NextResponse.json(
-        { error: "Unauthorized to delete users!" },
-        { status: 403 }
-      );
-    }
-  }
-
-  const result = await User.deleteMany({ _id: { $in: ids } });
-
-  return NextResponse.json({
-    success: true,
-    deletedCount: result.deletedCount,
-  });
-}
-export async function PATCH(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.DELETE_USERS,
+    checkValidId: true,
+    IDtoCheck: ids,
   });
   if (user instanceof NextResponse) return user;
 
+  // Start a session for the transaction
+  const session = await mongoose.startSession();
+
+  try {
+    // Start the transaction
+    await session.startTransaction();
+
+    // Is SuperAdmin
+    const superAdmin = isSuperAdmin(user);
+    if (!superAdmin) {
+      const usersToDelete = await User.find({ _id: { $in: ids } }).session(
+        session
+      );
+
+      const hasAdmins = usersToDelete.some(
+        (userToDelete) => userToDelete.role === "admin"
+      );
+
+      if (hasAdmins) {
+        await session.abortTransaction();
+        return NextResponse.json(
+          { error: "Unauthorized to delete users!" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Delete users
+    const result = await User.deleteMany({ _id: { $in: ids } }).session(
+      session
+    );
+
+    // Delete associated accounts for all users
+    await Accounts.deleteMany({ userId: { $in: ids } }).session(session);
+
+    // Commit the transaction
+    await session.commitTransaction();
+
+    // Trigger ISR revalidation
+    revalidatePath("/dashboard/users");
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    // Abort transaction on error
+    await session.abortTransaction();
+    return NextResponse.json(
+      { error: "Failed to delete users" },
+      { status: 500 }
+    );
+  } finally {
+    // End the session
+    await session.endSession();
+  }
+}
+export async function PATCH(request: NextRequest) {
   const body = await request.json();
   const { ids, isActive } = body;
-
-  if (!Array.isArray(ids) || typeof isActive !== "boolean") {
-    return NextResponse.json(
-      { error: "'ids' must be an array and 'isActive' must be a boolean" },
-      { status: 400 }
-    );
-  }
-
-  if (ids.some((id) => typeof id !== "string" || id.trim() === "")) {
-    return NextResponse.json(
-      { error: "All user IDs must be non-empty strings" },
-      { status: 400 }
-    );
-  }
+  const user = await AuthenticatedorNot(request, {
+    checkPermission: true,
+    Permission: PERMISSIONS.UPDATE_USERS,
+    checkValidId: true,
+    IDtoCheck: ids,
+  });
+  if (user instanceof NextResponse) return user;
 
   // Is SuperAdmin
   const superAdmin = isSuperAdmin(user);
@@ -80,7 +94,7 @@ export async function PATCH(request: NextRequest) {
     const usersToToggle = await User.find({ _id: { $in: ids } });
 
     const hasAdmins = usersToToggle.some(
-      (userToToggle) => userToToggle.role !== "admin"
+      (userToToggle) => userToToggle.role === "admin"
     );
 
     if (hasAdmins) {
@@ -91,7 +105,10 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const result = await User.updateMany({ _id: { $in: ids } }, { isActive });
+  const result = await User.updateMany(
+    { _id: { $in: ids } },
+    { isActive, updatedBy: user.id }
+  );
 
   return NextResponse.json({
     success: true,

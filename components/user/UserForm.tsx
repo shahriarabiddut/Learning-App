@@ -1,4 +1,5 @@
 "use client";
+import { ImageInput } from "@/components/shared/Input/ImageInput";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -9,14 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { userRoles } from "@/lib/constants/env";
 import {
   useAddUserMutation,
   useUpdateUserMutation,
@@ -29,10 +23,73 @@ import {
   userUpdateSchema,
 } from "@/schemas/userSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { ImageInput } from "@/components/shared/Input/ImageInput";
+import SearchableSelect from "../shared/Input/SearchableSelect";
+import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
+import { UserRole, UserType } from "@/lib/middle/roles";
+
+// Define userType options based on role
+const getValidUserTypesForRole = (role: string, isSuperAdmin: boolean) => {
+  switch (role) {
+    case UserRole.ADMIN:
+      return isSuperAdmin
+        ? [
+            { label: "User", value: UserType.USER },
+            { label: "Super Admin", value: UserType.SUPER_ADMIN },
+            { label: "Editor", value: UserType.EDITOR },
+          ]
+        : [
+            { label: "User", value: UserType.USER },
+            { label: "Editor", value: UserType.EDITOR },
+          ];
+
+    case UserRole.AUTHOR:
+      return [
+        { label: "Teacher", value: UserType.TEACHER },
+        { label: "Programmer", value: UserType.PROGRAMMER },
+        { label: "Engineer", value: UserType.ENGINEER },
+        { label: "Developer", value: UserType.DEVELOPER },
+        { label: "Designer", value: UserType.DESIGNER },
+        { label: "Data Scientist", value: UserType.DATA_SCIENTIST },
+        { label: "Technical Writer", value: UserType.TECHNICAL_WRITER },
+        { label: "Architect", value: UserType.ARCHITECT },
+      ];
+
+    case UserRole.USER:
+      return [
+        { label: "Student", value: UserType.STUDENT },
+        { label: "Commentator", value: UserType.COMMENTATOR },
+        { label: "Reader", value: UserType.READER },
+        { label: "Contributor", value: UserType.CONTRIBUTOR },
+        { label: "Moderator", value: UserType.MODERATOR },
+        { label: "Reviewer", value: UserType.REVIEWER },
+      ];
+
+    case UserRole.SUBSCRIBER:
+      return [{ label: "User", value: UserType.USER }];
+
+    default:
+      return [{ label: "User", value: UserType.USER }];
+  }
+};
+
+// Get default userType based on role
+const getDefaultUserType = (role: string): UserType => {
+  switch (role) {
+    case UserRole.ADMIN:
+      return UserType.USER;
+    case UserRole.AUTHOR:
+      return UserType.TEACHER;
+    case UserRole.USER:
+      return UserType.STUDENT;
+    case UserRole.SUBSCRIBER:
+      return UserType.USER;
+    default:
+      return UserType.USER;
+  }
+};
 
 export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
   const [addUser, { isLoading: loading }] = useAddUserMutation();
@@ -48,7 +105,7 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
       name: "",
       email: "",
       role: "user",
-      userType: "user",
+      userType: "student",
       password: "",
       isActive: false,
       emailVerified: false,
@@ -58,6 +115,43 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
 
   // Watch the role field to conditionally show/hide userType
   const selectedRole = form.watch("role");
+  const selectedUserType = form.watch("userType");
+  const { data: session } = useSession();
+
+  // Check if current user is superadmin
+  const isSuperAdmin = useMemo(() => {
+    return (
+      session?.user?.role === "admin" &&
+      session?.user?.userType === UserType.SUPER_ADMIN
+    );
+  }, [session]);
+
+  // Get available userType options based on selected role
+  const userTypeOptions = useMemo(() => {
+    return getValidUserTypesForRole(selectedRole, isSuperAdmin);
+  }, [selectedRole, isSuperAdmin]);
+
+  // Update userType when role changes
+  useEffect(() => {
+    if (selectedRole) {
+      const availableOptions = getValidUserTypesForRole(
+        selectedRole,
+        isSuperAdmin
+      );
+      const currentUserType = form.getValues("userType");
+
+      // Check if current userType is valid for the new role
+      const isValidUserType = availableOptions.some(
+        (option) => option.value === currentUserType
+      );
+
+      // If not valid, set to default
+      if (!isValidUserType) {
+        const defaultUserType = getDefaultUserType(selectedRole);
+        form.setValue("userType", defaultUserType);
+      }
+    }
+  }, [selectedRole, isSuperAdmin, form]);
 
   useEffect(() => {
     if (open) {
@@ -77,7 +171,7 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
           name: "",
           email: "",
           role: "user",
-          userType: "user",
+          userType: "student",
           password: "",
           isActive: false,
           emailVerified: false,
@@ -91,25 +185,11 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
     setIsSubmitting(true);
 
     try {
-      const { userType, ...restValues } = values;
-      const role = values.role;
-      const userTypeCheck =
-        role === "user"
-          ? ["user", "subscriber"].includes(userType)
-            ? userType
-            : "user"
-          : role === "inventory"
-          ? userType === "supplier"
-            ? userType
-            : "user"
-          : "user";
       const payload = {
-        ...restValues,
-        userType: userTypeCheck,
+        ...values,
         image: values.image,
       };
 
-      // return 1;
       if (user) {
         if (!payload.password || payload.password.trim() === "") {
           const { password, ...payloadWithoutPassword } = payload;
@@ -142,8 +222,6 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
     }
   };
 
-  const isSuperAdmin = useSuperAdmin();
-
   return (
     <div
       className={`fixed inset-0 z-50 overflow-y-auto ${
@@ -163,7 +241,7 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
             </h2>
             <button
               onClick={() => onOpenChange(false)}
-              className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -188,19 +266,21 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Name Field */}
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name</FormLabel>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Name <span className="text-red-500">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Full Name"
+                            placeholder="Enter full name"
                             {...field}
-                            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
                           />
                         </FormControl>
                         <FormMessage />
@@ -214,12 +294,15 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Email <span className="text-red-500">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input
+                            type="email"
                             placeholder="user@example.com"
                             {...field}
-                            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
                           />
                         </FormControl>
                         <FormMessage />
@@ -235,13 +318,15 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                       <FormItem
                         className={`${user ? "hidden" : "flex flex-col"}`}
                       >
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Password <span className="text-red-500">*</span>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             type="password"
-                            placeholder="Password"
+                            placeholder="Enter password"
                             {...field}
-                            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
                           />
                         </FormControl>
                         <FormMessage />
@@ -255,88 +340,70 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                     name="role"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="inventory">
-                              Inventory User
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Role <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            placeholder="Select role"
+                            options={userRoles}
+                            className="w-full h-auto bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
                       </FormItem>
                     )}
                   />
 
-                  {/* User Type Field - Only shown when role is "user" */}
-                  {(selectedRole === "user" ||
-                    selectedRole === "inventory") && (
-                    <FormField
-                      control={form.control}
-                      name="userType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>User Type</FormLabel>
-                          <Select
+                  {/* User Type Field - Controlled by Role */}
+                  <FormField
+                    control={form.control}
+                    name="userType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          User Type <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value || ""}
                             onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
-                                <SelectValue placeholder="Select Type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
-                              {selectedRole === "user" && (
-                                <>
-                                  <SelectItem value="user">User</SelectItem>
-                                  <SelectItem value="subscriber">
-                                    Subscriber
-                                  </SelectItem>{" "}
-                                </>
-                              )}
-                              {selectedRole === "inventory" && (
-                                <>
-                                  <SelectItem value="supplier">
-                                    SUPPLIER
-                                  </SelectItem>
-                                </>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                            placeholder="Select user type"
+                            options={userTypeOptions}
+                            className="w-full h-auto bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Available types depend on selected role
+                        </p>
+                      </FormItem>
+                    )}
+                  />
 
                   {/* Status Fields */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 md:col-span-2">
                     <FormField
                       control={form.control}
                       name="isActive"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-md border px-4 py-1 border-gray-300 dark:border-gray-600 h-12 md:h-10 mt-auto">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border px-4 py-3 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                           <div className="space-y-0.5">
-                            <FormLabel>Active Status</FormLabel>
+                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Active Status
+                            </FormLabel>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Enable user account
+                            </p>
                           </div>
                           <FormControl>
                             <input
                               type="checkbox"
                               checked={field.value}
                               onChange={field.onChange}
-                              className="h-5 w-5 text-blue-600 dark:text-blue-400 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-600"
+                              className="h-5 w-5 text-blue-600 dark:text-blue-400 rounded border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 cursor-pointer transition-all"
                             />
                           </FormControl>
                         </FormItem>
@@ -347,16 +414,21 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                       control={form.control}
                       name="emailVerified"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-md border px-4 py-1 border-gray-300 dark:border-gray-600 h-12 md:h-10 mt-auto">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border px-4 py-3 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                           <div className="space-y-0.5">
-                            <FormLabel>Email Verified</FormLabel>
+                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Email Verified
+                            </FormLabel>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Mark email as verified
+                            </p>
                           </div>
                           <FormControl>
                             <input
                               type="checkbox"
                               checked={field.value}
                               onChange={field.onChange}
-                              className="h-5 w-5 text-blue-600 dark:text-blue-400 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-600"
+                              className="h-5 w-5 text-blue-600 dark:text-blue-400 rounded border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 cursor-pointer transition-all"
                             />
                           </FormControl>
                         </FormItem>
@@ -371,7 +443,9 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                   name="image"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Image</FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Profile Image
+                      </FormLabel>
                       <ImageInput
                         value={field.value || ""}
                         onChange={field.onChange}
@@ -379,6 +453,9 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                         showCurrentImage={!!user}
                         placeholder="https://example.com/image.jpg"
                       />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Enter image URL or upload an image
+                      </p>
                     </FormItem>
                   )}
                 />
@@ -390,20 +467,20 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
                     variant="outline"
                     onClick={() => onOpenChange(false)}
                     disabled={isSubmitting}
-                    className="px-6 py-2"
+                    className="px-6 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting || loading}
-                    className="px-6 py-2"
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
                   >
                     {loading || isSubmitting
                       ? "Saving..."
                       : user
-                      ? "Update"
-                      : "Create"}
+                      ? "Update User"
+                      : "Create User"}
                   </Button>
                 </div>
               </form>

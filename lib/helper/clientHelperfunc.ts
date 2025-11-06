@@ -40,3 +40,41 @@ export function singleTitleToPluralY(title: string) {
 }
 
 export const handleNothing = (): void => {};
+
+export const extractErrorMessage = (
+  error: unknown,
+  defaultMessage: string = "Failed to perform the action"
+): string => {
+  const tryParseJson = (value: unknown): string | null => {
+    try {
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      if (parsed?.error && typeof parsed.error === "string")
+        return parsed.error;
+      if (typeof parsed === "string") return parsed;
+      return null;
+    } catch {
+      return typeof value === "string" ? value : null;
+    }
+  };
+
+  try {
+    if (!error) return defaultMessage;
+    if (typeof error === "string") return error;
+
+    if (typeof error === "object") {
+      const err = error as any;
+
+      // Try data, message, and error fields in order
+      const result =
+        tryParseJson(err.data) ??
+        tryParseJson(err.message) ??
+        (typeof err.error === "string" ? err.error : null);
+
+      if (result) return result;
+    }
+
+    return defaultMessage;
+  } catch {
+    return defaultMessage;
+  }
+};

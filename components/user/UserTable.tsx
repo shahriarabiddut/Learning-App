@@ -25,6 +25,8 @@ interface UserTableProps {
   handleBulkStatusToggle: (ids: string[], targetStatus: boolean) => void;
   canManage: boolean;
   isLoading: boolean;
+  canDelete: boolean;
+  canUpdate: boolean;
 }
 
 export const UserTable = ({
@@ -38,6 +40,8 @@ export const UserTable = ({
   handleBulkStatusToggle,
   canManage,
   isLoading,
+  canDelete = false,
+  canUpdate = false,
 }: UserTableProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
@@ -127,35 +131,39 @@ export const UserTable = ({
                   ? "Deselect all"
                   : "Select all"}
               </Button>
+              {canUpdate && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusToggleClick(true)}
+                    className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 text-xs sm:text-sm"
+                  >
+                    <FaCheckCircle className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">Activate</span>
+                  </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleBulkStatusToggleClick(true)}
-                className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 text-xs sm:text-sm"
-              >
-                <FaCheckCircle className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Activate</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleBulkStatusToggleClick(false)}
-                className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 text-xs sm:text-sm"
-              >
-                <FaBan className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Deactivate</span>
-              </Button>
-
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDeleteClick}
-                className="text-xs sm:text-sm"
-              >
-                Delete
-              </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusToggleClick(false)}
+                    className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 text-xs sm:text-sm"
+                  >
+                    <FaBan className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">Deactivate</span>
+                  </Button>
+                </>
+              )}
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDeleteClick}
+                  className="text-xs sm:text-sm"
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -168,14 +176,16 @@ export const UserTable = ({
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700">
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={
-                        users.length > 0 &&
-                        selectedUsers.length === users.length
-                      }
-                      onCheckedChange={toggleSelectAll}
-                      className="border-gray-400"
-                    />
+                    {canManage && (
+                      <Checkbox
+                        checked={
+                          users.length > 0 &&
+                          selectedUsers.length === users.length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                        className="border-gray-400"
+                      />
+                    )}
                     <span>User</span>
                   </div>
                 </TableHead>
@@ -187,9 +197,11 @@ export const UserTable = ({
                     <TableHead className="text-center font-semibold text-gray-700 hidden sm:table-cell">
                       Status
                     </TableHead>
-                    <TableHead className="text-center font-semibold text-gray-700">
-                      Actions
-                    </TableHead>
+                    {canManage && (
+                      <TableHead className="text-center font-semibold text-gray-700">
+                        Actions
+                      </TableHead>
+                    )}
                   </>
                 )}
               </TableRow>
@@ -212,14 +224,16 @@ export const UserTable = ({
                   >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={selectedUsers.includes(user?.id)}
-                          disabled={isDisabled}
-                          onCheckedChange={(checked) =>
-                            handleCheckboxChange(checked, index, user?.id)
-                          }
-                          className="border-gray-400 flex-shrink-0"
-                        />
+                        {canManage && (
+                          <Checkbox
+                            checked={selectedUsers.includes(user?.id)}
+                            disabled={isDisabled}
+                            onCheckedChange={(checked) =>
+                              handleCheckboxChange(checked, index, user?.id)
+                            }
+                            className="border-gray-400 flex-shrink-0"
+                          />
+                        )}
                         <div
                           onClick={() => {
                             if (!isDisabled) handleViewClick(user);
@@ -286,19 +300,23 @@ export const UserTable = ({
                             {user.isActive ? "Active" : "Inactive"}
                           </span>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <UserActions
-                            user={user}
-                            onEdit={() => handleEditClick(user)}
-                            onView={() => handleViewClick(user)}
-                            onDelete={() => handleDeleteClick(user.id)}
-                            showtoggleButtons={false}
-                            onToggleStatus={() =>
-                              handleToggleStatusClick(user.id, user.isActive)
-                            }
-                            isLoading={isDisabled || isLoading}
-                          />
-                        </TableCell>
+                        {canManage && (
+                          <TableCell className="text-center">
+                            <UserActions
+                              user={user}
+                              onEdit={() => handleEditClick(user)}
+                              onView={() => handleViewClick(user)}
+                              onDelete={() => handleDeleteClick(user.id)}
+                              showtoggleButtons={false}
+                              onToggleStatus={() =>
+                                handleToggleStatusClick(user.id, user.isActive)
+                              }
+                              isLoading={isDisabled || isLoading}
+                              canDelete={canDelete}
+                              canUpdate={canUpdate}
+                            />
+                          </TableCell>
+                        )}
                       </>
                     )}
                   </TableRow>

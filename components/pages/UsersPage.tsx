@@ -20,7 +20,11 @@ import {
 } from "@/components/shared/Loader/SkeletonLoader";
 import useIsClient from "@/hooks/useIsClient";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
-import { capitalizeWords, handleNothing } from "@/lib/helper/clientHelperfunc";
+import {
+  capitalizeWords,
+  extractErrorMessage,
+  handleNothing,
+} from "@/lib/helper/clientHelperfunc";
 import {
   useBulkDeleteUsersMutation,
   useBulkToggleUserStatusMutation,
@@ -30,7 +34,9 @@ import {
 } from "@/lib/redux-features/user/userApi";
 import {
   loadInitialUserUIState,
-  selectCanManageUsers,
+  selectCanAddUser,
+  selectCanDeleteUser,
+  selectCanUpdateUser,
   setCurrentPage,
   setSearchQuery,
   setSortBy,
@@ -138,7 +144,7 @@ const UsersHeader = memo(
     dispatch,
     sortBy,
     viewMode,
-    canManageUsers,
+    canAdd,
     onAddNew,
     loading,
     refetch,
@@ -149,7 +155,7 @@ const UsersHeader = memo(
     dispatch: any;
     sortBy: any;
     viewMode: any;
-    canManageUsers: boolean;
+    canAdd: boolean;
     onAddNew: () => void;
     loading: boolean;
     refetch: () => void;
@@ -159,10 +165,15 @@ const UsersHeader = memo(
       searchQuery={searchQuery}
       onSearch={onSearch}
       loading={loading}
-      canAdd={canManageUsers}
       onAddNew={onAddNew}
       ViewToggleComponent={UserViewToggle}
-      viewToggleProps={{ dispatch, sortBy, viewMode }}
+      viewToggleProps={{
+        dispatch,
+        sortBy,
+        viewMode,
+        canAdd: canAdd,
+        onAddNew: onAddNew,
+      }}
       refetch={refetch}
     />
   )
@@ -177,7 +188,9 @@ const UserContentView = memo(
     totalPages,
     userId,
     title,
-    canManageUsers,
+    canManage = false,
+    canDelete = false,
+    canUpdate = false,
   }: {
     viewMode: string;
     users: IUser[];
@@ -185,7 +198,9 @@ const UserContentView = memo(
     totalPages: number;
     userId: string | null;
     title: string;
-    canManageUsers: boolean;
+    canManage: boolean;
+    canDelete: boolean;
+    canUpdate: boolean;
   }) => (
     <EntityContentView
       viewMode={viewMode as "grid" | "table"}
@@ -204,7 +219,9 @@ const UserContentView = memo(
       commonProps={{
         userId: userId,
         title: title,
-        canManage: canManageUsers,
+        canManage: canManage,
+        canDelete: canDelete,
+        canUpdate: canUpdate,
       }}
     />
   )
@@ -266,7 +283,10 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
   }, [session?.user?.role, dispatch]);
 
   // Permission selectors
-  const canManageUsers = useAppSelector(selectCanManageUsers);
+  const canAddUser = useAppSelector(selectCanAddUser);
+  const canUpdateUser = useAppSelector(selectCanUpdateUser);
+  const canDeleteUser = useAppSelector(selectCanDeleteUser);
+  const canManageUsers = canAddUser && canUpdateUser && canDeleteUser;
 
   // Memoized values
   const users = useMemo(() => usersData?.data || [], [usersData?.data]);
@@ -349,7 +369,9 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
           `User ${isActive ? "deactivated" : "activated"} successfully`
         );
       } catch (error) {
-        toast.error("Failed to update user status");
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to update user status!");
+        toast.error(errorMessage as string);
       }
     };
 
@@ -363,8 +385,9 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
         await bulkDeleteUsers(ids).unwrap();
         toast.success("Users deleted successfully");
       } catch (error) {
-        console.error("Bulk delete error:", error);
-        toast.error("Failed to delete users");
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to delete users!");
+        toast.error(errorMessage as string);
       }
     };
 
@@ -382,8 +405,9 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
           } successfully`
         );
       } catch (error) {
-        console.error("Bulk toggle error:", error);
-        toast.error("Failed to update user statuses");
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to Update Users!");
+        toast.error(errorMessage as string);
       }
     };
 
@@ -402,7 +426,6 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
     bulkDeleteUsers,
     bulkToggleUserStatus,
   ]);
-  // console.log("UsersPage Rendered : canManageUsers", canManageUsers);
   // Go to last available page on Last Item Delete
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
@@ -486,7 +509,7 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
         dispatch={dispatch}
         sortBy={sortBy}
         viewMode={viewMode}
-        canManageUsers={canManageUsers}
+        canAdd={canAddUser}
         onAddNew={handleAddNew}
         loading={loading}
         refetch={refetchUsers}
@@ -510,7 +533,9 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
           totalPages={totalPages}
           userId={userId}
           title={title}
-          canManageUsers={canManageUsers}
+          canManage={canManageUsers}
+          canDelete={canDeleteUser}
+          canUpdate={canUpdateUser}
         />
       ) : searchQuery ? (
         <EmptySearchState
@@ -540,12 +565,12 @@ const UsersContent = memo(({ extra }: { extra: any }) => {
           viewModalOpen={viewModalOpen}
           setViewModalOpen={handleSetViewModalOpen}
           selectedUser={selectedUser}
-          onEdit={canManageUsers ? handleModalEdit : handleNothing}
+          onEdit={canUpdateUser ? handleModalEdit : handleNothing}
           deleteDialogOpen={deleteDialogOpen}
           setDeleteDialogOpen={setDeleteDialogOpen}
           userToDelete={userToDelete}
           onUsersChange={refetchUsers}
-          canManage={canManageUsers}
+          canManage={canUpdateUser}
         />
       </ChunkErrorBoundaryWithSuspense>
     </div>

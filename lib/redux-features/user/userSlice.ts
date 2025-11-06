@@ -8,7 +8,11 @@ interface UserState {
   searchQuery: string;
   sortBy: string;
   currentPage: number;
-  canManageUsers: boolean;
+  canViewUser: boolean;
+  canAddUser: boolean;
+  canDeleteUser: boolean;
+  canViewAllData: boolean;
+  canUpdateUser: boolean;
   userRole: string | null;
   lastUserRoleUpdate: number;
 }
@@ -19,7 +23,11 @@ const initialState: UserState = {
   searchQuery: "",
   sortBy: "createdAt-desc",
   currentPage: 1,
-  canManageUsers: false,
+  canViewUser: false,
+  canAddUser: false,
+  canDeleteUser: false,
+  canViewAllData: false,
+  canUpdateUser: false,
   userRole: null,
   lastUserRoleUpdate: 0,
 };
@@ -96,13 +104,20 @@ const saveUISettings = (settings: Partial<UserState>) => {
   }, 200);
 };
 
-// Simplified permission calculation
-const calculatePermissions = (userRole: string) => ({
-  canManageUsers: hasPermission(
-    (userRole as UserRole) || "user",
-    PERMISSIONS.MANAGE_USERS
-  ),
-});
+// Enhanced permission calculation
+const calculatePermissions = (userRole: string | null | undefined) => {
+  const role = userRole || null;
+  return {
+    canViewUser: hasPermission(role as UserRole, PERMISSIONS.VIEW_USERS),
+    canAddUser: hasPermission(role as UserRole, PERMISSIONS.ADD_USERS),
+    canDeleteUser: hasPermission(role as UserRole, PERMISSIONS.DELETE_USERS),
+    canUpdateUser: hasPermission(role as UserRole, PERMISSIONS.UPDATE_USERS),
+    canViewAllData: hasPermission(
+      role as UserRole,
+      PERMISSIONS.ADMIN_CONTROLLED_DATA
+    ),
+  };
+};
 
 const userSlice = createSlice({
   name: "user",
@@ -149,8 +164,14 @@ const userSlice = createSlice({
       if (state.userRole !== normalizedRole) {
         state.userRole = normalizedRole;
         state.lastUserRoleUpdate = Date.now();
+
+        // Recalculate all permissions
         const permissions = calculatePermissions(normalizedRole);
-        state.canManageUsers = permissions.canManageUsers;
+        state.canViewUser = permissions.canViewUser;
+        state.canAddUser = permissions.canAddUser;
+        state.canDeleteUser = permissions.canDeleteUser;
+        state.canUpdateUser = permissions.canUpdateUser;
+        state.canViewAllData = permissions.canViewAllData;
       }
     },
     resetUserState(state) {
@@ -182,20 +203,24 @@ export const loadInitialUserUIState = (): UserState => {
     ...stored,
     currentPage: 1,
     searchQuery: "",
-    canManageUsers: false,
+    canViewUser: false,
+    canAddUser: false,
+    canDeleteUser: false,
+    canUpdateUser: false,
+    canViewAllData: false,
     userRole: null,
     lastUserRoleUpdate: 0,
   };
 };
 
 // Basic selectors that return primitive values
-const selectUserState = (state: { user: UserState }) => state.user;
+// const selectUserState = (state: { user: UserState }) => state.user;
 const selectCurrentPage = (state: { user: UserState }) =>
   state.user.currentPage;
 const selectItemsPerPage = (state: { user: UserState }) =>
   state.user.itemsPerPage;
 
-// FIXED: Memoized selector that only creates new object when values actually change
+// Memoized selector that only creates new object when values actually change
 export const selectUserPagination = createSelector(
   [selectCurrentPage, selectItemsPerPage],
   (currentPage, itemsPerPage) => ({
@@ -211,7 +236,28 @@ export const selectUserSearchQuery = (state: { user: UserState }) =>
   state.user.searchQuery;
 export const selectUserSortBy = (state: { user: UserState }) =>
   state.user.sortBy;
-export const selectCanManageUsers = (state: { user: UserState }) =>
-  state.user.canManageUsers;
+
+// Permission selectors
+export const selectCanViewUser = (state: { user: UserState }) =>
+  state.user.canViewUser;
+export const selectCanAddUser = (state: { user: UserState }) =>
+  state.user.canAddUser;
+export const selectCanDeleteUser = (state: { user: UserState }) =>
+  state.user.canDeleteUser;
+export const selectCanUpdateUser = (state: { user: UserState }) =>
+  state.user.canUpdateUser;
+export const selectCanViewAllData = (state: { user: UserState }) =>
+  state.user.canViewAllData;
+
+// Combined permissions selector
+export const selectUserPermissions = (state: { user: UserState }) => ({
+  canViewUser: state.user.canViewUser,
+  canAddUser: state.user.canAddUser,
+  canDeleteUser: state.user.canDeleteUser,
+  canUpdateUser: state.user.canUpdateUser,
+  canViewAllData: state.user.canViewAllData,
+  userRole: state.user.userRole,
+  lastUpdated: state.user.lastUserRoleUpdate,
+});
 
 export default userSlice.reducer;

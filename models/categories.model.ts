@@ -5,10 +5,10 @@ export interface ICategory extends Document {
   name: string;
   description?: string;
   imageUrl?: string;
-  parentCategory?: mongoose.Types.ObjectId | null | string;
+  parentCategory?: mongoose.Types.ObjectId | string | null;
   isActive: boolean;
   featured: boolean;
-  demo?: boolean;
+  updatedBy?: mongoose.Types.ObjectId | string | null;
   addedBy: mongoose.Types.ObjectId | string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -22,6 +22,8 @@ const CategorySchema: Schema = new Schema(
       type: String,
       required: true,
       trim: true,
+      // Make unique per store instead of globally unique
+      // unique: true
     },
     description: { type: String, default: "" },
     imageUrl: { type: String, default: "" },
@@ -32,16 +34,20 @@ const CategorySchema: Schema = new Schema(
     },
     isActive: { type: Boolean, require: true, default: true },
     featured: { type: Boolean, default: false },
-    demo: { type: Boolean, default: false },
     addedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,
-    collection: "categorys",
+    collection: "categories",
     toJSON: {
       virtuals: true,
       transform: function (doc, ret) {
@@ -62,10 +68,10 @@ const CategorySchema: Schema = new Schema(
   }
 );
 
-// Add compound index for unique category
-CategorySchema.index({ name: 1 }, { unique: true });
+// Add compound index for unique category names per store
+CategorySchema.index({ name: 1, store: 1 }, { unique: true });
 
-// Add a virtual for child categorys (optional)
+// Add a virtual for child categories (optional)
 CategorySchema.virtual("children", {
   ref: "Category",
   localField: "_id",

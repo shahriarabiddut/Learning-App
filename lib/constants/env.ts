@@ -127,3 +127,10 @@ export const SITE_DEFAULTS = {
   locale: SITE_LOCALE,
   keywords: SITE_KEYWORDS,
 };
+
+export const userRoles = [
+  { label: "Admin", value: "admin" },
+  { label: "Author", value: "author" },
+  { label: "User", value: "user" },
+  { label: "Subscriber", value: "subscriber" },
+];

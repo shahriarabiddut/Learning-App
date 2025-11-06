@@ -1,4 +1,9 @@
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
+import {
+  AuthenticatedorNot,
+  includeIfPermitted,
+  isSuperAdmin,
+  populateIfPermitted,
+} from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Accounts from "@/models/accounts.model";
 import { User } from "@/models/users.model";
@@ -12,6 +17,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
+
   // Authenticate and check permission
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
@@ -22,15 +28,59 @@ export async function GET(
   if (user instanceof NextResponse) return user;
 
   try {
-    // Find user by _id
-    const userData = await User.findById(id);
+    // Base query
+    let query: any = { _id: id };
+
+    const baseQuery = User.findOne(query).select("-password");
+
+    // Conditionally populate based on permission
+    populateIfPermitted(baseQuery, user, PERMISSIONS.ADMIN_CONTROLLED_DATA, [
+      {
+        path: "updatedBy",
+        select: "name",
+      },
+      {
+        path: "addedBy",
+        select: "name",
+      },
+    ]);
+
+    const userData = await baseQuery.lean();
+
     if (!userData) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    if (user.role != "admin" && userData.role == "admin") {
+
+    // Prevent non-admins from viewing admin data
+    if (user.role !== "admin" && userData.role === "admin") {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    return NextResponse.json(userData);
+
+    // Build formatted response (same shape as list)
+    const formattedUser = {
+      id: userData._id,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      userType: userData.userType,
+      isActive: userData.isActive,
+      emailVerified: userData.emailVerified,
+      image: userData.image,
+      ...includeIfPermitted(user, PERMISSIONS.ADMIN_CONTROLLED_DATA, {
+        addedBy:
+          userData.addedBy?._id || userData.addedBy?.id || userData.addedBy,
+        userName: userData.addedBy?.name,
+        updatedBy:
+          userData.updatedBy?._id ||
+          userData.updatedBy?.id ||
+          userData.updatedBy,
+        updatedByUser: userData.updatedBy?.name,
+        updatedAt: userData.updatedAt,
+      }),
+      createdAt: userData.createdAt,
+    };
+
+    return NextResponse.json(formattedUser);
   } catch (err) {
     console.error("Failed to fetch User:", err);
     return NextResponse.json(
@@ -44,21 +94,16 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.UPDATE_USERS,
+    checkValidId: true,
+    IDtoCheck: id,
   });
   if (user instanceof NextResponse) return user;
 
   try {
-    const { id } = await context.params;
-    if (!id) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
     const validation = userUpdateSchema.safeParse(body);
     if (!validation.success) {
@@ -100,7 +145,7 @@ export async function PATCH(
     }
 
     // Don't update password if it's not provided
-    const updateData = { ...validation.data };
+    const updateData = { ...validation.data, updatedBy: user.id };
 
     const updatedUser = await User.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -120,36 +165,34 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.DELETE_USERS,
+    checkValidId: true,
+    IDtoCheck: id,
   });
   if (user instanceof NextResponse) return user;
 
+  // Start a session for the transaction
+  const session = await mongoose.startSession();
+
   try {
-    const { id } = await context.params;
-    if (!id) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
+    // Start the transaction
+    await session.startTransaction();
+
     // Check if user exists and has permission to update
-    const existingUser = await User.findById(id);
+    const existingUser = await User.findById(id).session(session);
     if (!existingUser) {
+      await session.abortTransaction();
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    // If not Admin Then UnAutorized
-    if (existingUser && user.role !== "admin") {
-      return NextResponse.json(
-        { error: "Unauthorized to Delete this Data!" },
-        { status: 403 }
-      );
-    }
+
     if (existingUser.role === "admin") {
       const superAdmin = isSuperAdmin(user);
-      // If not SuperAdmin Then UnAutorized
+      // If not SuperAdmin Then Unauthorized
       if (!superAdmin) {
+        await session.abortTransaction();
         return NextResponse.json(
           { error: "Unauthorized to Delete this Data!" },
           { status: 403 }
@@ -158,22 +201,33 @@ export async function DELETE(
     }
 
     // Delete the user
-    const deletedUser = await User.findByIdAndDelete(id);
+    const deletedUser = await User.findByIdAndDelete(id).session(session);
     if (!deletedUser) {
+      await session.abortTransaction();
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Delete associated account(s)
-    await Accounts.deleteMany({ userId: new mongoose.Types.ObjectId(id) });
+    await Accounts.deleteMany({
+      userId: new mongoose.Types.ObjectId(id),
+    }).session(session);
+
+    // Commit the transaction
+    await session.commitTransaction();
 
     // Trigger ISR revalidation
     revalidatePath("/dashboard/users");
 
     return NextResponse.json({ id }, { status: 200 });
   } catch (error) {
+    // Abort transaction on error
+    await session.abortTransaction();
     return NextResponse.json(
       { error: "Failed to delete user" },
       { status: 500 }
     );
+  } finally {
+    // End the session
+    await session.endSession();
   }
 }

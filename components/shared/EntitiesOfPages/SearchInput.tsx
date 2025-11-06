@@ -79,7 +79,7 @@ const SearchInput = memo(
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={placeHolder}
-            className={`pl-8 pr-8 w-[80vw] sm:w-[180px] lg:w-[240px]`}
+            className={`pl-8 pr-8 w-[80vw] sm:w-[190px] lg:w-[240px]`}
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             aria-label="Search What You Are Looking For"

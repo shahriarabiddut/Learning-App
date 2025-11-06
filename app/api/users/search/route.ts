@@ -1,12 +1,12 @@
-import { User } from "@/models/users.model";
-import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot } from "@/app/api/server/route";
 import { PERMISSIONS } from "@/lib/middle/permissions";
+import { User } from "@/models/users.model";
+import { AuthenticatedorNot } from "@/services/dbAndPermission.service";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.VIEW_USERS,
   });
   if (user instanceof NextResponse) return user;
 

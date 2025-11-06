@@ -1,9 +1,12 @@
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
 import { hashPassword } from "@/lib/helper/clientHelperfunc";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Accounts from "@/models/accounts.model";
 import { User } from "@/models/users.model";
 import { userSchema } from "@/schemas/userSchema";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
@@ -11,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.VIEW_USERS,
   });
   if (user instanceof NextResponse) return user;
 
@@ -49,13 +52,15 @@ export async function GET(request: NextRequest) {
       ];
       page = 1; // Reset to page 1 when searching
     }
+    // Build the base query
+    const baseQuery = User.find(query)
+      .select("-password -updatedAt -addedBy -updatedBy ")
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort(sort);
 
     const [rawData, total] = await Promise.all([
-      User.find(query)
-        .select("-password")
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .sort(sort),
+      baseQuery,
       User.countDocuments(query),
     ]);
 
@@ -66,13 +71,10 @@ export async function GET(request: NextRequest) {
         name: obj.name,
         email: obj.email,
         role: obj.role,
-        userType: obj.userType,
         isActive: obj.isActive,
-        emailVerified: obj.emailVerified,
         image: obj.image,
-        addedBy: obj.addedBy?.toString(),
+        userType: obj.userType,
         createdAt: obj.createdAt,
-        updatedAt: obj.updatedAt,
       };
     });
 
@@ -94,7 +96,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.ADD_USERS,
   });
   if (user instanceof NextResponse) return user;
 
@@ -145,6 +147,7 @@ export async function POST(request: NextRequest) {
     revalidatePath("/dashboard/users");
     return NextResponse.json(safeUser, { status: 201 });
   } catch (error) {
+    console.log(error);
     return NextResponse.json(
       { error: "Failed to create user" },
       { status: 500 }

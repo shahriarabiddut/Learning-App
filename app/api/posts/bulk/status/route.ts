@@ -1,7 +1,10 @@
 import { hasPermission, PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
 import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
 import { UserRole } from "@/lib/middle/roles";
 
 // BULK UPDATE STATUS

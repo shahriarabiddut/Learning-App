@@ -5,7 +5,10 @@ import "@/models/categories.model";
 import { blogPostSchema } from "@/schemas/blogPostSchema";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot, isSuperAdmin } from "../server/route";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
 
 export async function GET(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {

@@ -9,27 +9,28 @@ import {
 } from "@/components/shared/InsideToggles";
 
 export const UserViewToggle = ({
-  setIsFormOpen,
-  canManageUsers,
+  onAddNew,
+  canAdd,
 }: {
-  setIsFormOpen: (data: boolean) => void;
-  canManageUsers: boolean;
+  onAddNew: () => void;
+  canAdd: boolean;
 }) => {
   const dispatch = useAppDispatch();
   const { viewMode, sortBy } = useAppSelector((state) => state.user);
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <SortSelector
           value={sortBy}
           onChange={(val) => dispatch(setSortBy(val))}
+          width="w-[180px]"
         />
         <ViewModeToggle
           value={viewMode}
           onChange={(val) => dispatch(setViewMode(val))}
         />
-        {canManageUsers && <AddNewButton onClick={() => setIsFormOpen(true)} />}
+        {canAdd && <AddNewButton onClick={onAddNew} />}
       </div>
     </>
   );

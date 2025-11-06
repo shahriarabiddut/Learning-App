@@ -119,7 +119,6 @@ const DynamicFormRenderer = memo(
     if (!isOpen || !formType) return null;
     const FormComponent = formComponents[formType];
 
-    // Use 'open' prop instead of 'isFormOpen' and 'onOpenChange' instead of 'handleFormClose'
     return (
       <FormComponent open={isOpen} onOpenChange={onOpenChange} {...formProps} />
     );
@@ -167,12 +166,11 @@ export function DashboardXSidebar({ session }: SidebarProps) {
     preloadForm,
   } = useFormManager();
 
-  // Handle sidebar toggle
   const onCollapse = useCallback(() => {
     dispatch(toggleSidebarCollapsed());
   }, [dispatch]);
 
-  // Memoize filtered links with multi-permission support
+  // Memoize filtered links
   const filteredLinks = useMemo(() => {
     return NAV_LINKS.filter((link) => {
       return checkPermissions(session?.user?.role as UserRole, link.permission);
@@ -190,7 +188,7 @@ export function DashboardXSidebar({ session }: SidebarProps) {
     });
   }, [session?.user?.role]);
 
-  // Close all dropdowns when sidebar collapses
+  // Close dropdowns when sidebar collapses
   useEffect(() => {
     if (isCollapsed) {
       setOpenDropdowns({});
@@ -265,7 +263,7 @@ export function DashboardXSidebar({ session }: SidebarProps) {
         if (hoverTimeout) clearTimeout(hoverTimeout);
         const timeout = setTimeout(() => {
           setOpenDropdowns((prev) => ({ ...prev, [name]: true }));
-        }, 200);
+        }, 150);
         setHoverTimeout(timeout);
       }
     },
@@ -298,7 +296,6 @@ export function DashboardXSidebar({ session }: SidebarProps) {
     [pathname]
   );
 
-  // Handle child click (form or navigation)
   const handleChildClick = useCallback(
     (child: any) => {
       if (child.action && child.form) {
@@ -311,7 +308,6 @@ export function DashboardXSidebar({ session }: SidebarProps) {
     [openForm, router, closeMobileMenu]
   );
 
-  // Handle child hover for preloading
   const handleChildHover = useCallback(
     (child: any) => {
       if (child.form && child.action) {
@@ -345,8 +341,8 @@ export function DashboardXSidebar({ session }: SidebarProps) {
           variant="outline"
           size="icon"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="bg-background shadow-md"
-          title="View Menu"
+          className="bg-background/95 backdrop-blur-sm shadow-lg border-2 hover:scale-105 transition-transform"
+          title={mobileMenuOpen ? "Close Menu" : "Open Menu"}
         >
           {mobileMenuOpen ? (
             <X className="h-5 w-5" />
@@ -359,7 +355,7 @@ export function DashboardXSidebar({ session }: SidebarProps) {
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/20 z-40"
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-in fade-in duration-200"
           onClick={closeMobileMenu}
         />
       )}
@@ -367,19 +363,26 @@ export function DashboardXSidebar({ session }: SidebarProps) {
       {/* Mobile Full-Screen Menu */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 z-60 w-80 bg-background border-r shadow-lg transform transition-transform duration-300 ease-in-out overflow-y-auto",
+          "md:hidden fixed inset-y-0 left-0 z-50 w-80 bg-background/95 backdrop-blur-md border-r shadow-2xl transform transition-transform duration-300 ease-out overflow-y-auto",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
         ref={sidebarRef}
       >
-        <div className="flex h-16 items-center justify-between px-4 border-b">
-          <h2 className="text-lg font-semibold">Dashboard Panel</h2>
-          <Button variant="ghost" size="icon" onClick={closeMobileMenu}>
+        <div className="flex h-16 items-center justify-between px-5 border-b bg-background/50">
+          <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Dashboard
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={closeMobileMenu}
+            className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+          >
             <X className="h-5 w-5" />
           </Button>
         </div>
-        <nav className="flex-1 px-4 py-4">
-          <ul className="space-y-2">
+        <nav className="flex-1 px-3 py-4">
+          <ul className="space-y-1.5">
             {filteredLinks.map((item) => {
               const itemIsActive = isActive(item.href, item.children);
               const isDropdownOpen = openDropdowns[item.name];
@@ -391,25 +394,25 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "w-full justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                         itemIsActive || hasActiveChildren
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent hover:text-accent-foreground"
+                          ? "bg-primary/10 text-primary shadow-sm"
+                          : "hover:bg-accent/50 hover:scale-[1.02]"
                       )}
                       onClick={() => toggleDropdown(item.name)}
                     >
-                      <div className="flex items-center">
-                        <item.icon className="h-5 w-5 mr-3" />
-                        {item.name}
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.name}</span>
                       </div>
                       {isDropdownOpen ? (
-                        <ChevronUp className="h-4 w-4" />
+                        <ChevronUp className="h-4 w-4 transition-transform" />
                       ) : (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4 transition-transform" />
                       )}
                     </Button>
                     {isDropdownOpen && (
-                      <ul className="ml-6 space-y-1 mt-2">
+                      <ul className="ml-4 space-y-1 mt-1.5 animate-in slide-in-from-top-2 duration-200">
                         {item.children.map((child) => {
                           const isChildActive = pathname.startsWith(
                             child.href || ""
@@ -423,15 +426,15 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                                 <Button
                                   variant="ghost"
                                   className={cn(
-                                    "w-full justify-start px-4 py-2 text-sm",
+                                    "w-full justify-start px-4 py-2 text-sm rounded-lg transition-all",
                                     isChildActive
-                                      ? "bg-accent text-accent-foreground"
-                                      : "hover:bg-accent"
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : "hover:bg-accent/50 hover:translate-x-1"
                                   )}
                                   onClick={() => handleChildClick(child)}
                                 >
                                   {child.icon && (
-                                    <child.icon className="h-4 w-4 mr-2" />
+                                    <child.icon className="h-4 w-4 mr-3" />
                                   )}
                                   {child.name}
                                 </Button>
@@ -443,14 +446,14 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                                   <Button
                                     variant="ghost"
                                     className={cn(
-                                      "w-full justify-start px-4 py-2 text-sm",
+                                      "w-full justify-start px-4 py-2 text-sm rounded-lg transition-all",
                                       isChildActive
-                                        ? "bg-accent text-accent-foreground"
-                                        : "hover:bg-accent"
+                                        ? "bg-primary/10 text-primary font-medium"
+                                        : "hover:bg-accent/50 hover:translate-x-1"
                                     )}
                                   >
                                     {child.icon && (
-                                      <child.icon className="h-4 w-4 mr-2" />
+                                      <child.icon className="h-4 w-4 mr-3" />
                                     )}
                                     {child.name}
                                   </Button>
@@ -471,10 +474,10 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "w-full justify-start rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                         itemIsActive
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent hover:text-accent-foreground"
+                          ? "bg-primary/10 text-primary shadow-sm"
+                          : "hover:bg-accent/50 hover:scale-[1.02]"
                       )}
                     >
                       <item.icon className="h-5 w-5 mr-3" />
@@ -491,14 +494,24 @@ export function DashboardXSidebar({ session }: SidebarProps) {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden md:flex flex-col border-r bg-background transition-all duration-300 ease-in-out sticky top-0 h-screen overflow-y-auto",
+          "hidden md:flex flex-col border-r bg-background/50 backdrop-blur-sm transition-all duration-300 ease-in-out sticky top-0 h-screen overflow-y-auto shadow-sm",
           isCollapsed ? "w-20" : "w-64"
         )}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="flex h-16 items-center justify-between px-4">
-          {!isCollapsed && <h2 className="text-lg">Dashboard Panel</h2>}
-          <Button variant="ghost" size="icon" onClick={onCollapse}>
+        <div className="flex h-16 items-center justify-between px-4 border-b bg-background/30">
+          {!isCollapsed && (
+            <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Dashboard
+            </h2>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCollapse}
+            className="hover:bg-accent/50 transition-all hover:scale-110"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
             {isCollapsed ? (
               <ChevronRight className="h-5 w-5" />
             ) : (
@@ -507,8 +520,8 @@ export function DashboardXSidebar({ session }: SidebarProps) {
           </Button>
         </div>
         <SidebarSeparator />
-        <nav className="flex-1 px-2 pt-3">
-          <ul className="space-y-1">
+        <nav className="flex-1 px-2.5 pt-4">
+          <ul className="space-y-1.5">
             {filteredLinks.map((item) => {
               const itemIsActive = isActive(item.href, item.children);
               const isDropdownOpen = openDropdowns[item.name];
@@ -534,23 +547,23 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                           <Button
                             variant="ghost"
                             className={cn(
-                              "w-full justify-center px-0 rounded-lg py-2 text-sm font-medium transition-colors",
+                              "w-full justify-center rounded-xl py-2.5 text-sm font-medium transition-all duration-200",
                               itemIsActive || hasActiveChildren
-                                ? "bg-accent text-accent-foreground"
-                                : "hover:bg-accent hover:text-accent-foreground"
+                                ? "bg-primary/10 text-primary shadow-sm scale-105"
+                                : "hover:bg-accent/50 hover:scale-105"
                             )}
                             title={item.name}
                           >
-                            <item.icon className="h-5 w-5 -ml-3" />
+                            <item.icon className="h-5 w-5" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent
                           align="start"
                           side="right"
-                          className="w-48 p-0 ml-2"
+                          className="w-56 p-1.5 ml-2 border-2 shadow-xl"
                         >
-                          <div className="py-1 space-y-1">
-                            <div className="px-3 py-2 text-sm font-medium border-b">
+                          <div className="space-y-1">
+                            <div className="px-3 py-2.5 text-sm font-bold border-b bg-accent/30 rounded-t-lg">
                               {item.name}
                             </div>
                             {item.children.map((child) => (
@@ -562,15 +575,15 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                                   <Button
                                     variant="ghost"
                                     className={cn(
-                                      "w-full justify-start px-4 py-2 text-sm",
+                                      "w-full justify-start px-3.5 py-2.5 text-sm rounded-lg transition-all",
                                       pathname.startsWith(child.href || "")
-                                        ? "bg-accent text-accent-foreground"
-                                        : "hover:bg-accent"
+                                        ? "bg-primary/10 text-primary font-medium"
+                                        : "hover:bg-accent/50 hover:translate-x-1"
                                     )}
                                     onClick={() => handleChildClick(child)}
                                   >
                                     {child.icon && (
-                                      <child.icon className="h-4 w-4 mr-2" />
+                                      <child.icon className="h-4 w-4 mr-3" />
                                     )}
                                     {child.name}
                                   </Button>
@@ -579,14 +592,14 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                                     <Button
                                       variant="ghost"
                                       className={cn(
-                                        "w-full justify-start px-4 py-2 text-sm",
+                                        "w-full justify-start px-3.5 py-2.5 text-sm rounded-lg transition-all",
                                         pathname.startsWith(child.href || "")
-                                          ? "bg-accent text-accent-foreground"
-                                          : "hover:bg-accent"
+                                          ? "bg-primary/10 text-primary font-medium"
+                                          : "hover:bg-accent/50 hover:translate-x-1"
                                       )}
                                     >
                                       {child.icon && (
-                                        <child.icon className="h-4 w-4 mr-2" />
+                                        <child.icon className="h-4 w-4 mr-3" />
                                       )}
                                       {child.name}
                                     </Button>
@@ -602,25 +615,25 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                         <Button
                           variant="ghost"
                           className={cn(
-                            "w-full justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                            "w-full justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                             itemIsActive || hasActiveChildren
-                              ? "bg-accent text-accent-foreground"
-                              : "hover:bg-accent hover:text-accent-foreground"
+                              ? "bg-primary/10 text-primary shadow-sm"
+                              : "hover:bg-accent/50 hover:scale-[1.02]"
                           )}
                           onClick={() => toggleDropdown(item.name)}
                         >
-                          <div className="flex items-center">
-                            <item.icon className="h-5 w-5 mr-4.5" />
-                            {item.name}
+                          <div className="flex items-center gap-3">
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.name}</span>
                           </div>
                           {isDropdownOpen ? (
-                            <ChevronUp className="h-4 w-4" />
+                            <ChevronUp className="h-4 w-4 transition-transform duration-200" />
                           ) : (
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                           )}
                         </Button>
                         {isDropdownOpen && (
-                          <ul className="ml-6 space-y-2 mt-1">
+                          <ul className="ml-4 space-y-1 mt-1.5 animate-in slide-in-from-top-2 duration-200">
                             {item.children.map((child) => {
                               const isChildActive = pathname.startsWith(
                                 child.href || ""
@@ -634,10 +647,10 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                                     <Button
                                       variant="ghost"
                                       className={cn(
-                                        "w-full justify-start px-4 py-1 text-sm",
+                                        "w-full justify-start px-4 py-2 text-sm rounded-lg transition-all",
                                         isChildActive
-                                          ? "bg-accent text-accent-foreground"
-                                          : "hover:bg-accent"
+                                          ? "bg-primary/10 text-primary font-medium"
+                                          : "hover:bg-accent/50 hover:translate-x-1"
                                       )}
                                       onClick={() => handleChildClick(child)}
                                     >
@@ -651,10 +664,10 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                                       <Button
                                         variant="ghost"
                                         className={cn(
-                                          "w-full justify-start px-4 py-1 text-sm",
+                                          "w-full justify-start px-4 py-2 text-sm rounded-lg transition-all",
                                           isChildActive
-                                            ? "bg-accent text-accent-foreground"
-                                            : "hover:bg-accent"
+                                            ? "bg-primary/10 text-primary font-medium"
+                                            : "hover:bg-accent/50 hover:translate-x-1"
                                         )}
                                       >
                                         {child.icon && (
@@ -681,11 +694,11 @@ export function DashboardXSidebar({ session }: SidebarProps) {
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "w-full justify-start rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                         itemIsActive
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent hover:text-accent-foreground",
-                        isCollapsed && "justify-center px-0"
+                          ? "bg-primary/10 text-primary shadow-sm"
+                          : "hover:bg-accent/50 hover:scale-[1.02]",
+                        isCollapsed && "justify-center"
                       )}
                       title={isCollapsed ? item.name : undefined}
                     >

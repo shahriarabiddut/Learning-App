@@ -27,8 +27,9 @@ const ICONS: Record<string, JSX.Element> = {
 interface ActionButtonProps {
   action: "view" | "note" | "edit" | "delete" | "duplicate";
   show?: boolean;
-  onClick: () => void;
+  showTitle?: boolean;
   title?: string;
+  onClick: () => void;
   isLoading?: boolean;
   className?: string;
 }
@@ -36,36 +37,47 @@ interface ActionButtonProps {
 export const ActionButton = ({
   action,
   show = true,
-  onClick,
+  showTitle = false,
   title,
+  onClick,
   isLoading = false,
   className = "",
 }: ActionButtonProps) => {
   if (!show) return null;
 
   const baseClass = {
-    view: "text-blue-500 hover:bg-blue-50",
+    view: "text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
     note: "text-orange-500 hover:bg-orange-50",
-    edit: "",
-    delete: "text-red-500 hover:bg-red-50",
-    duplicate: "",
+    edit: "text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20",
+    delete:
+      "text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
+    duplicate:
+      "text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20",
   };
 
   return (
     <Button
       variant={"outline"}
-      size="sm"
+      size={showTitle ? undefined : "icon"}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
       title={title}
-      className={`rounded-full p-1 md:p-2 ${
-        action == "duplicate" && "md:flex hidden"
-      } ${baseClass[action] || ""} ${className}`}
+      className={`transition-colors ${
+        showTitle
+          ? "rounded-lg px-3 py-2 flex items-center gap-2"
+          : "rounded-full p-1 md:p-2"
+      } ${action == "duplicate" && "md:flex hidden"} ${
+        baseClass[action] || ""
+      } ${className}`}
       disabled={isLoading}
+      type="button"
     >
       {ICONS[action]}
+      {showTitle && (
+        <span className="text-sm font-medium">{isLoading ? "..." : title}</span>
+      )}
     </Button>
   );
 };
@@ -75,39 +87,46 @@ export const ToggleStatus = ({
   item,
   onToggleStatus,
   isLoading = false,
-  buttonShowText = { active: "Active", disable: "Inactive" },
-  buttonText = { active: "Activate", disable: "Disable" },
-  title = "item",
 }: ToggleStatusProps) => {
   if (!show) return null;
-  const status = item?.isActive || item?.status;
+
   return (
     <div className="group inline-flex items-center space-x-2 ml-2">
       <Badge
-        variant={!status ? "default" : "secondaryGreen"}
-        className="cursor-help py-1.5"
+        variant={!item.isActive ? "default" : "secondaryGreen"}
+        className="cursor-help md:py-1.5 md:px-2 px-0.5"
+        title={item.isActive ? "Item is Active" : "Item is Inactive"}
       >
-        {status ? buttonShowText.active : buttonShowText.disable}
+        <span className="md:inline-flex hidden">
+          {item.isActive ? "Active" : "Inactive"}
+        </span>{" "}
+        <span className="inline-flex md:hidden">
+          {item.isActive ? ICONS.activate : ICONS.disable}
+        </span>
       </Badge>
 
       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <Button
-          variant={status ? "secondary" : "outline"}
+          variant={item.isActive ? "secondary" : "outline"}
           size="sm"
-          title={`${status ? buttonText.disable : buttonText.active} ${title}!`}
+          title={item.isActive ? "Disable This Item" : "Activate This Item"}
           className={`${
-            status
+            item.isActive
               ? "bg-gray-900 text-white hover:bg-red-500"
               : "bg-green-200 text-green-800 hover:bg-green-400 hover:text-white"
-          } gap-1 rounded-full flex items-center text-xs`}
+          } gap-1 rounded-full flex items-center text-xs md:py-1.5 md:px-2 px-0.5`}
           onClick={(e) => {
             e.stopPropagation();
-            onToggleStatus(item.id, status);
+            onToggleStatus(item.id, item.isActive);
           }}
           disabled={isLoading}
+          type="button"
         >
-          {status ? ICONS.disable : ICONS.activate}
-          {isLoading ? "..." : status ? buttonText.disable : buttonText.active}
+          {item.isActive ? ICONS.disable : ICONS.activate}
+          <span className="lg:inline-flex hidden">
+            {" "}
+            {isLoading ? "..." : item.isActive ? "Disable" : "Activate"}
+          </span>
         </Button>
       </div>
     </div>

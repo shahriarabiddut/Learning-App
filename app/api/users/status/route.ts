@@ -2,25 +2,23 @@ import { PERMISSIONS } from "@/lib/middle/permissions";
 import { User } from "@/models/users.model";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
 
 export async function PATCH(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_USERS,
+    Permission: PERMISSIONS.UPDATE_USERS,
+    checkValidId: true,
+    IDtoCheck: id,
   });
   if (user instanceof NextResponse) return user;
 
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
     // Validate request body
     const body = await request.json();
     if (typeof body.isActive !== "boolean") {
@@ -48,7 +46,7 @@ export async function PATCH(request: NextRequest) {
     // Update status
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { isActive: body.isActive },
+      { isActive: body.isActive, updatedBy: user.id },
       { new: true }
     );
 

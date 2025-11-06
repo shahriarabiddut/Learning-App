@@ -7,8 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { formatDate } from "@/lib/helper/clientHelperfunc";
+import { extractErrorMessage, formatDate } from "@/lib/helper/clientHelperfunc";
 import { useDeleteUserMutation } from "@/lib/redux-features/user/userApi";
 import { IUser } from "@/models/users.model";
 import { toast } from "sonner";
@@ -36,7 +35,7 @@ export const UserModal = ({
   onUsersChange,
   canManage = false,
 }: UserModalProps) => {
-  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [deleteUser] = useDeleteUserMutation();
   // Delete handler
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
@@ -46,13 +45,14 @@ export const UserModal = ({
       toast.success("User deleted successfully");
       onUsersChange?.();
     } catch (error) {
-      toast.error("Failed to delete user");
+      const errorMessage =
+        error && extractErrorMessage(error, "Failed to delete user!");
+      toast.error(errorMessage as string);
     } finally {
       setDeleteDialogOpen(false);
     }
   };
 
-  const isSuperAdmin = useSuperAdmin();
   return (
     <>
       {/* View User Dialog */}
@@ -66,15 +66,15 @@ export const UserModal = ({
               <div className="flex items-start space-x-6">
                 {/* Avatar Section */}
                 <div className="flex-shrink-0 w-32 h-32 rounded-xl border border-border bg-muted flex items-center justify-center">
-                  {selectedUser.image ? (
+                  {selectedUser?.image ? (
                     <img
-                      src={selectedUser.image}
-                      alt={selectedUser.name}
+                      src={selectedUser?.image}
+                      alt={selectedUser?.name}
                       className="w-full h-full rounded-lg object-cover"
                     />
                   ) : (
                     <span className="text-4xl font-semibold text-muted-foreground">
-                      {selectedUser.name?.charAt(0)}
+                      {selectedUser?.name?.charAt(0)}
                     </span>
                   )}
                 </div>
@@ -82,26 +82,50 @@ export const UserModal = ({
                 {/* Info Section */}
                 <div className="flex-1 min-w-0 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground">
-                      {selectedUser.name}
+                    <h2 className="text-xl font-bold text-foreground">
+                      {selectedUser?.name}
                     </h2>
 
-                    <div className="mt-1 space-y-1 text-sm text-muted-foreground">
-                      <p>Email: {selectedUser.email}</p>
-                      <p className="capitalize">
-                        Role: {selectedUser.role || "No role assigned"}
+                    <div className="mt-1 space-y-2 text-sm text-muted-foreground">
+                      <p>
+                        Email:{" "}
+                        <span className="font-semibold text-black">
+                          {selectedUser?.email}
+                        </span>
                       </p>
-                      <p>Joined: {formatDate(selectedUser.createdAt)}</p>
-                      <p>Last Updated: {formatDate(selectedUser.updatedAt)}</p>
+                      <p className="capitalize">
+                        Role: {selectedUser?.role || "No role assigned"}{" "}
+                        {selectedUser?.userType && (
+                          <Badge variant={"outline"}>
+                            Type : {selectedUser?.userType}
+                          </Badge>
+                        )}
+                      </p>
+                      <p>Joined: {formatDate(selectedUser?.createdAt)}</p>
+                      {selectedUser?.addedBy && selectedUser?.userName && (
+                        <>
+                          <p>Added By : {selectedUser?.userName}</p>
+                        </>
+                      )}
+                      {selectedUser?.updatedByUser &&
+                        selectedUser?.updatedAt && (
+                          <>
+                            <p>
+                              Last Updated:{" "}
+                              {formatDate(selectedUser?.updatedAt)}
+                            </p>
+                            <p>Updated By: {selectedUser?.updatedByUser}</p>
+                          </>
+                        )}
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3">
                       <Badge
                         variant={
-                          !selectedUser.isActive ? "default" : "secondaryGreen"
+                          !selectedUser?.isActive ? "default" : "secondaryGreen"
                         }
                       >
-                        Acount: {selectedUser.isActive ? "Active" : "Inactive"}
+                        Acount: {selectedUser?.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
                   </div>

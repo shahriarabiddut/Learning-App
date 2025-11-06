@@ -1,7 +1,10 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Category from "@/models/categories.model";
 import { NextRequest, NextResponse } from "next/server";
-import { AuthenticatedorNot, isSuperAdmin } from "@/app/api/server/route";
+import {
+  AuthenticatedorNot,
+  isSuperAdmin,
+} from "@/services/dbAndPermission.service";
 
 export async function DELETE(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
