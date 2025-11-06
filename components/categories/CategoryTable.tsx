@@ -208,9 +208,7 @@ export const CategoryTable = ({
                 </div>
               </TableHead>
               <TableHead className="hidden md:table-cell">Parent</TableHead>
-              {canViewAllData && (
-                <TableHead className="hidden md:table-cell">Store</TableHead>
-              )}
+
               {canManage && (
                 <TableHead className="text-center">Actions</TableHead>
               )}
@@ -273,11 +271,6 @@ export const CategoryTable = ({
                     "None"
                   )}
                 </TableCell>
-                {canViewAllData && (
-                  <TableHead className="capitalize hidden md:table-cell">
-                    {category.store}
-                  </TableHead>
-                )}
                 {canManage && (
                   <TableCell className="max-w-32 ">
                     {/* Actions */}

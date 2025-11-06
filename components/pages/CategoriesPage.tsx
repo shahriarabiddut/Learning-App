@@ -6,14 +6,8 @@ import {
   EmptySearchState,
 } from "@/components/shared/EntitiesOfPages/EmptySearchState";
 import { EntityContentView } from "@/components/shared/EntitiesOfPages/EntityContentView";
-import ErrorMessage from "@/components/shared/EntitiesOfPages/ErrorMessage";
 import { PageHeader } from "@/components/shared/EntitiesOfPages/PageHeader";
 import PageSkeleton from "@/components/shared/EntitiesOfPages/PageSkeleton";
-import {
-  useHandleDelete,
-  useHandleEdit,
-  useHandleView,
-} from "@/components/shared/handlerFunctions/handlers";
 import {
   GridSkeletonLoader,
   TableSkeletonLoader,
@@ -31,7 +25,6 @@ import {
   loadInitialCategoryUIState,
   selectCanAddCategory,
   selectCanDeleteCategories,
-  selectCanManageCategories,
   selectCanUpdateCategories,
   setCurrentPage,
   setSearchQuery,
@@ -42,7 +35,7 @@ import {
 import { selectCanViewAllData } from "@/lib/redux-features/user/userSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { ICategory } from "@/models/categories.model";
-import { AlertTriangle, Building } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   memo,

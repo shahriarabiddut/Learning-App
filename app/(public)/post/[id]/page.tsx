@@ -3,7 +3,7 @@ import type { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
 import Script from "next/script";
 import { IBlogPost } from "@/models/blogPost.model";
-import { BlogPostView } from "@/components/pages/BlogPostView";
+import { BlogPostView } from "@/components/pages/public/BlogPostView";
 
 // Shared fetch function
 const fetchBlogPost = async (id: string): Promise<IBlogPost> => {

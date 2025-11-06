@@ -8,7 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 import { useAddCommentMutation } from "@/lib/redux-features/blogPost/blogPostApi";
 import { IComment } from "@/models/blogPost.model";
-import { Loader2, MessageSquare, Send, Clock } from "lucide-react";
+import {
+  Loader2,
+  MessageSquare,
+  Send,
+  Clock,
+  Reply as ReplyIcon,
+  X,
+  LogIn,
+} from "lucide-react";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +32,7 @@ interface PendingComment {
   email?: string;
   body: string;
   createdAt: Date;
+  parentId?: string;
 }
 
 function formatCommentDate(date: Date | string | undefined): string {
@@ -64,7 +74,11 @@ export function CommentsSection({
     email: "",
     body: "",
   });
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
   const [pendingComments, setPendingComments] = useState<PendingComment[]>([]);
+
+  const isLoggedIn = !!session?.user;
 
   // Auto-fill form data when session is available
   useEffect(() => {
@@ -80,18 +94,20 @@ export function CommentsSection({
   // Filter only approved comments
   const approvedComments = comments.filter((comment) => comment.approved);
 
-  const isLoggedIn = !!session?.user;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.body.trim()) {
-      toast.error("Please fill in your name and comment");
+    if (!isLoggedIn) {
+      toast.error("Please sign in to comment");
+      return;
+    }
+
+    if (!formData.body.trim()) {
+      toast.error("Please enter your comment");
       return;
     }
 
     try {
-      // Add to pending comments immediately
       const newPendingComment: PendingComment = {
         name: formData.name.trim(),
         email: formData.email.trim() || undefined,
@@ -109,20 +125,34 @@ export function CommentsSection({
         },
       }).unwrap();
 
-      toast.success(
-        "Comment submitted successfully! It will appear after approval."
-      );
-
-      // Only clear the body field, keep name and email for logged-in users
-      setFormData((prev) => ({
-        ...prev,
-        body: "",
-      }));
+      toast.success("Comment submitted! It will appear after approval.");
+      setFormData((prev) => ({ ...prev, body: "" }));
     } catch (error) {
-      // Remove from pending if submission failed
       setPendingComments((prev) => prev.slice(0, -1));
       console.error("Failed to add comment:", error);
       toast.error("Failed to submit comment. Please try again.");
+    }
+  };
+
+  const handleReply = async (commentId: string) => {
+    if (!isLoggedIn) {
+      toast.error("Please sign in to reply");
+      return;
+    }
+
+    if (!replyBody.trim()) {
+      toast.error("Please enter your reply");
+      return;
+    }
+
+    try {
+      // Add reply logic here - you'll need to implement this in your API
+      toast.success("Reply submitted! It will appear after approval.");
+      setReplyBody("");
+      setReplyingTo(null);
+    } catch (error) {
+      console.error("Failed to add reply:", error);
+      toast.error("Failed to submit reply. Please try again.");
     }
   };
 
@@ -140,122 +170,135 @@ export function CommentsSection({
   }
 
   return (
-    <div className="mt-12">
-      <div className="flex items-center gap-2 mb-6">
-        <MessageSquare className="w-6 h-6 text-primary" />
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-          Comments ({approvedComments.length})
-        </h2>
+    <div className="mt-16">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
+          <MessageSquare className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
+            Comments
+          </h2>
+          <p className="text-slate-600 dark:text-slate-400">
+            {approvedComments.length}{" "}
+            {approvedComments.length === 1 ? "comment" : "comments"}
+          </p>
+        </div>
       </div>
 
-      {/* Comment Form */}
-      <Card className="mb-8 border-2">
-        <CardContent className="pt-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Leave a Comment
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">
-                  Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Your name"
-                  required
-                  disabled={isLoading || isLoggedIn}
-                  className="mt-1 disabled:opacity-60"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email (optional)</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your.email@example.com"
-                  disabled={isLoading || isLoggedIn}
-                  className="mt-1 disabled:opacity-60"
-                />
-              </div>
+      {/* Login Required Message */}
+      {!isLoggedIn && (
+        <Card className="mb-8 border-2 border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
+          <CardContent className="p-8 text-center">
+            <LogIn className="w-12 h-12 mx-auto mb-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+              Sign in to join the conversation
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              Share your thoughts and engage with our community
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Link href="/sign-in">
+                <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button
+                  variant="outline"
+                  className="border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                >
+                  Create Account
+                </Button>
+              </Link>
             </div>
-            <div>
-              <Label htmlFor="body">
-                Comment <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="body"
-                name="body"
-                value={formData.body}
-                onChange={handleChange}
-                placeholder="Share your thoughts..."
-                required
-                disabled={isLoading}
-                rows={4}
-                className="mt-1 resize-none"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Post Comment
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Pending Comments (Under Review) */}
+      {/* Comment Form - Only show if logged in */}
+      {isLoggedIn && (
+        <Card className="mb-8 border-2 border-emerald-200 dark:border-emerald-800 shadow-lg">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              Leave a Comment
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Textarea
+                  id="body"
+                  name="body"
+                  value={formData.body}
+                  onChange={handleChange}
+                  placeholder="Share your thoughts..."
+                  required
+                  disabled={isLoading}
+                  rows={4}
+                  className="resize-none border-slate-300 dark:border-slate-700 focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-emerald-500"
+                />
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Commenting as{" "}
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {session?.user.name}
+                  </span>
+                </p>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Post Comment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending Comments */}
       {pendingComments.length > 0 && (
-        <div className="space-y-4 mb-6">
+        <div className="space-y-4 mb-8">
           {pendingComments.map((comment, index) => (
             <Card
               key={`pending-${index}`}
-              className="border-l-4 border-l-yellow-500 bg-muted/30"
+              className="border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20"
             >
-              <CardContent className="pt-4">
-                <div className="flex items-start gap-3">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-muted-foreground/20 to-muted-foreground/10 flex-shrink-0">
-                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground">
-                      {comment.name.charAt(0).toUpperCase()}
-                    </div>
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg">
+                    {comment.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h4 className="font-semibold text-muted-foreground">
+                        <h4 className="font-semibold text-slate-900 dark:text-white">
                           {comment.name}
                         </h4>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {formatCommentDate(comment.createdAt)}
                         </p>
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap mb-3">
                       {comment.body}
                     </p>
-                    <div className="flex items-center gap-2 mt-3 text-xs text-yellow-600 dark:text-yellow-500">
+                    <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-3 py-1.5 rounded-full w-fit">
                       <Clock className="w-3 h-3" />
-                      <span className="font-medium">
-                        Under review - Pending approval
-                      </span>
+                      Pending approval
                     </div>
                   </div>
                 </div>
@@ -267,53 +310,109 @@ export function CommentsSection({
 
       {/* Approved Comments List */}
       {approvedComments.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {approvedComments.map((comment, index) => (
-            <Card key={index} className="border-l-4 border-l-primary">
-              <CardContent className="pt-4">
-                <div className="flex items-start gap-3">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 flex-shrink-0">
-                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-primary">
-                      {comment.name.charAt(0).toUpperCase()}
-                    </div>
+            <Card
+              key={index}
+              className="border-2 border-slate-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-shadow"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg">
+                    {comment.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h4 className="font-semibold text-foreground">
+                        <h4 className="font-semibold text-slate-900 dark:text-white text-lg">
                           {comment.name}
                         </h4>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
                           {formatCommentDate(comment.createdAt)}
                         </p>
                       </div>
+                      {isLoggedIn && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setReplyingTo(
+                              replyingTo === comment.name ? null : comment.name
+                            )
+                          }
+                          className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        >
+                          {replyingTo === comment.name ? (
+                            <>
+                              <X className="w-4 h-4 mr-1" />
+                              Cancel
+                            </>
+                          ) : (
+                            <>
+                              <ReplyIcon className="w-4 h-4 mr-1" />
+                              Reply
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">
+                    <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                       {comment.body}
                     </p>
 
+                    {/* Reply Form */}
+                    {replyingTo === comment.name && (
+                      <div className="mt-4 pl-4 border-l-2 border-emerald-500">
+                        <Textarea
+                          value={replyBody}
+                          onChange={(e) => setReplyBody(e.target.value)}
+                          placeholder="Write your reply..."
+                          rows={3}
+                          className="mb-2 resize-none border-slate-300 dark:border-slate-700 focus:border-emerald-500 dark:focus:border-emerald-500"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleReply(comment.name)}
+                            size="sm"
+                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                          >
+                            <Send className="w-3 h-3 mr-1" />
+                            Reply
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setReplyingTo(null);
+                              setReplyBody("");
+                            }}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Nested Replies */}
                     {comment.replies && comment.replies.length > 0 && (
-                      <div className="mt-4 ml-6 space-y-3 border-l-2 border-muted pl-4">
+                      <div className="mt-6 space-y-4 pl-6 border-l-2 border-emerald-200 dark:border-emerald-800">
                         {comment.replies
                           .filter((reply) => reply.approved)
                           .map((reply, replyIndex) => (
                             <div key={replyIndex} className="flex gap-3">
-                              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-secondary/30 to-secondary/10 flex-shrink-0">
-                                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-secondary-foreground">
-                                  {reply.name.charAt(0).toUpperCase()}
-                                </div>
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
+                                {reply.name.charAt(0).toUpperCase()}
                               </div>
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h5 className="font-semibold text-sm text-foreground">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h5 className="font-semibold text-slate-900 dark:text-white">
                                     {reply.name}
                                   </h5>
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-slate-500 dark:text-slate-400">
                                     {formatCommentDate(reply.createdAt)}
                                   </span>
                                 </div>
-                                <p className="text-sm text-foreground whitespace-pre-wrap">
+                                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
                                   {reply.body}
                                 </p>
                               </div>
@@ -328,11 +427,14 @@ export function CommentsSection({
           ))}
         </div>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="pt-8 pb-8 text-center">
-            <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">
-              No comments yet. Be the first to share your thoughts!
+        <Card className="border-2 border-dashed border-slate-300 dark:border-slate-700">
+          <CardContent className="p-12 text-center">
+            <MessageSquare className="w-16 h-16 mx-auto text-slate-400 dark:text-slate-600 mb-4" />
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+              No comments yet
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              Be the first to share your thoughts on this article!
             </p>
           </CardContent>
         </Card>

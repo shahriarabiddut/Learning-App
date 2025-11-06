@@ -1,7 +1,7 @@
 "use client";
 
 import Footer from "@/components/Footer";
-import { usePathname } from "next/navigation";
+import Header from "@/components/shared/Header";
 import type React from "react";
 import { Toaster } from "sonner";
 
@@ -10,12 +10,10 @@ export default function PublicLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname(); // Use usePathname hook
-  const isHomePage = pathname === "/"; // Now compare pathname directly
-
   return (
     <>
-      <main className="relative min-h-screen flex flex-col ">
+      <main className="relative min-h-screen flex flex-col bg-white dark:bg-slate-900">
+        <Header />
         <section className="flex-1">{children}</section>
         <Footer />
       </main>

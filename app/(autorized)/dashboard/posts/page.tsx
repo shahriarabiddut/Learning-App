@@ -1,4 +1,4 @@
-import { BlogPostPage } from "@/components/pages/BlogPostPage";
+import { BlogPostPage } from "@/components/pages/public/BlogPostPage";
 import { SITE_DEFAULTS } from "@/lib/constants/env";
 import { generateMetadata } from "@/lib/seo/generateMetadata";
 

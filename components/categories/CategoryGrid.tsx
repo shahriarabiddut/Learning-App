@@ -180,7 +180,7 @@ export const CategoryGrid = ({
         </div>
       )}
 
-      <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {categories.map((category, index) => (
           <Card
             key={category.id}
@@ -246,14 +246,6 @@ export const CategoryGrid = ({
                   {category.name}
                 </h2>
                 <p className="line-clamp-3">{category.description}</p>
-                {canViewAllData && (
-                  <div className="capitalize text-xs font-semibold">
-                    {" "}
-                    {category.store != "0"
-                      ? ` Store : ${category.store}`
-                      : "General Store"}
-                  </div>
-                )}
               </div>
             </div>
 
