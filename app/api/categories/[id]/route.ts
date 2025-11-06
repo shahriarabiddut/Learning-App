@@ -1,6 +1,8 @@
 import {
   AuthenticatedorNot,
+  includeIfPermitted,
   isSuperAdmin,
+  populateIfPermitted,
 } from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Category from "@/models/categories.model";
@@ -17,24 +19,27 @@ export async function GET(
   const params = await context.params;
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_CATEGORIES,
+    Permission: PERMISSIONS.VIEW_CATEGORIES,
     checkValidId: true,
     IDtoCheck: params.id,
   });
   if (user instanceof NextResponse) return user;
 
   try {
-    // Find the category and populate the addedBy field
-    const category = await Category.findById(params.id)
-      .populate({
+    // Build the base query
+    const baseQuery = Category.findById(params.id);
+    // Conditionally populate based on permissions
+    populateIfPermitted(baseQuery, user, PERMISSIONS.ADMIN_CONTROLLED_DATA, [
+      {
+        path: "updatedBy",
+        select: "name",
+      },
+      {
         path: "addedBy",
         select: "name",
-      })
-      .populate({
-        path: "parentCategory",
-        select: "name",
-      })
-      .lean();
+      },
+    ]);
+    const category = await baseQuery;
     if (!category) {
       return NextResponse.json(
         { error: "Category not found" },
@@ -49,15 +54,19 @@ export async function GET(
       description: category.description,
       imageUrl: category.imageUrl,
       parentCategory: category.parentCategory
-        ? category.parentCategory._id
+        ? category.parentCategory.id || category.parentCategory._id
         : null,
       parent: category.parentCategory ? category.parentCategory.name : null,
       isActive: category.isActive,
-      addedBy: category.addedBy._id,
-      userName: category.addedBy.name,
+      featured: category.featured,
+      ...includeIfPermitted(user, PERMISSIONS.ADMIN_CONTROLLED_DATA, {
+        addedBy:
+          category.addedBy?._id || category.addedBy?.id || category.addedBy,
+        userName: category.addedBy?.name,
+        updatedBy: category.updatedBy,
+        updatedAt: category.updatedAt,
+      }),
       createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
-      user: (category.addedBy as any)?.name || "Unknown", // Get the populated name
     };
 
     return NextResponse.json(transformedCategory);
@@ -76,7 +85,7 @@ export async function PATCH(
   const params = await context.params;
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_CATEGORIES,
+    Permission: PERMISSIONS.UPDATE_CATEGORIES,
     checkValidId: true,
     IDtoCheck: params.id,
   });
@@ -120,7 +129,7 @@ export async function PATCH(
 
     const updatedCategory = await Category.findByIdAndUpdate(
       id,
-      validation.data,
+      { ...validation.data, updatedBy: user.id },
       {
         new: true,
       }
@@ -140,7 +149,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: "Duplicate Category Not Allowed!",
-          // "Duplicate Category Not Allowed - A category with this name already exists for this store",
+          // "Duplicate Category Not Allowed - A category with this name already ",
         },
         { status: 409 } // 409 Conflict is appropriate for duplicate resource requests
       );
@@ -159,7 +168,7 @@ export async function DELETE(
   const params = await context.params;
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_CATEGORIES,
+    Permission: PERMISSIONS.DELETE_CATEGORIES,
     checkValidId: true,
     IDtoCheck: params.id,
   });

@@ -19,6 +19,7 @@ import {
   TableSkeletonLoader,
 } from "@/components/shared/Loader/SkeletonLoader";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
+import { extractErrorMessage } from "@/lib/helper/clientHelperfunc";
 import {
   useAddCategoryMutation,
   useBulkDeleteCategoriesMutation,
@@ -28,16 +29,20 @@ import {
 } from "@/lib/redux-features/categories/categoriesApi";
 import {
   loadInitialCategoryUIState,
+  selectCanAddCategory,
+  selectCanDeleteCategories,
   selectCanManageCategories,
+  selectCanUpdateCategories,
   setCurrentPage,
   setSearchQuery,
   setSortBy,
   setViewMode,
   updateUserPermissions,
 } from "@/lib/redux-features/categories/categoriesSlice";
+import { selectCanViewAllData } from "@/lib/redux-features/user/userSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
 import { ICategory } from "@/models/categories.model";
-import { Building } from "lucide-react";
+import { AlertTriangle, Building } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   memo,
@@ -147,7 +152,7 @@ const CategoriesHeader = memo(
     dispatch,
     sortBy,
     viewMode,
-    canManageCategories,
+    canAdd,
     onAddNew,
     loading,
     refetch,
@@ -157,26 +162,29 @@ const CategoriesHeader = memo(
     dispatch: any;
     sortBy: any;
     viewMode: any;
-    canManageCategories: boolean;
+    canAdd: boolean;
     onAddNew: () => void;
     loading: boolean;
     refetch: () => void;
   }) => (
     <PageHeader
-      title="Categories"
+      refetch={refetch}
+      title={`Categories`}
       searchQuery={searchQuery}
       onSearch={onSearch}
       loading={loading}
-      canAdd={canManageCategories}
-      onAddNew={onAddNew}
       ViewToggleComponent={CategoryViewToggle}
-      viewToggleProps={{ dispatch, sortBy, viewMode }}
-      refetch={refetch}
+      viewToggleProps={{
+        dispatch,
+        sortBy,
+        viewMode,
+        canAdd: canAdd,
+        onAddNew: onAddNew,
+      }}
+      searchPlaceholder="Search Categories..."
     />
   )
 );
-
-CategoriesHeader.displayName = "CategoriesHeader";
 
 // Memoized content view component
 const CategoryContentView = memo(
@@ -185,11 +193,17 @@ const CategoryContentView = memo(
     categories,
     handlers,
     totalPages,
+    canManage = false,
+    canViewAllData = false,
+    canDelete = false,
   }: {
     viewMode: string;
-    categories: any[];
+    categories: ICategory[];
     handlers: any;
     totalPages: number;
+    canManage: boolean;
+    canViewAllData: boolean;
+    canDelete: boolean;
   }) => (
     <EntityContentView
       viewMode={viewMode as "grid" | "table"}
@@ -198,24 +212,25 @@ const CategoryContentView = memo(
       TableComponent={CategoryTable}
       PaginationComponent={CategoryPagination}
       handlers={handlers}
-      entityKey="categories"
+      entityKey={"categories"}
       totalPages={totalPages}
       gridCols={3}
       gridLgCols={4}
       gridItems={12}
-      tableCols={3}
+      tableCols={4}
       tableRows={9}
-      permissions={{ canManage: true, canView: true }}
+      commonProps={{
+        canManage: canManage,
+        canDelete: canDelete,
+        canViewAllData: canViewAllData,
+      }}
     />
   )
 );
 
-CategoryContentView.displayName = "CategoryContentView";
-
 // Main content component
 const CategoriesContent = memo(() => {
   const dispatch = useAppDispatch();
-  const isClient = useIsClient();
 
   // UI state from Redux
   const { viewMode, searchQuery, sortBy, currentPage, itemsPerPage } =
@@ -227,7 +242,6 @@ const CategoriesContent = memo(() => {
     isLoading,
     isFetching,
     error,
-    isError,
     refetch,
   } = useFetchCategoriesQuery({
     page: currentPage,
@@ -235,14 +249,14 @@ const CategoriesContent = memo(() => {
     search: searchQuery,
     sortBy,
   });
-  // console.log(isLoading, isFetching, error, isError);
+
   // RTK Query mutations
   const [addCategory] = useAddCategoryMutation();
   const [bulkDelete] = useBulkDeleteCategoriesMutation();
   const [bulkToggle] = useBulkToggleCategoryPropertyMutation();
   const [triggerGetCategory] = useLazyGetCategoryByIdQuery();
 
-  // Local state - Initialize with consistent values
+  // Local state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ICategory | null>(
     null
@@ -255,7 +269,6 @@ const CategoriesContent = memo(() => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
   const { data: session } = useSession();
-
   // Update permissions in Redux when session changes
   useEffect(() => {
     if (session?.user?.role !== undefined) {
@@ -268,7 +281,12 @@ const CategoriesContent = memo(() => {
   }, [session?.user?.role, dispatch]);
 
   // Memoized values
-  const canManageCategories = useAppSelector(selectCanManageCategories);
+  const canAddCategory = useAppSelector(selectCanAddCategory);
+  const canDeleteCategories = useAppSelector(selectCanDeleteCategories);
+  const canUpdateCategories = useAppSelector(selectCanUpdateCategories);
+  const canManageCategories =
+    canAddCategory && canUpdateCategories && canDeleteCategories;
+  const canViewAllData = useAppSelector(selectCanViewAllData);
 
   const categories = useMemo(
     () => categoriesData?.data || [],
@@ -279,10 +297,8 @@ const CategoriesContent = memo(() => {
     [categoriesData?.totalPages]
   );
 
-  // Initialize component with UI state from localStorage - only on client
+  // Initialize component with UI state from localStorage
   useEffect(() => {
-    if (!isClient) return;
-
     const initializeComponent = () => {
       try {
         const initialUIState = loadInitialCategoryUIState();
@@ -290,54 +306,62 @@ const CategoriesContent = memo(() => {
         dispatch(setCurrentPage(initialUIState.currentPage));
         dispatch(setSortBy(initialUIState.sortBy));
       } catch (error) {
-        // Don't show toast during initialization to prevent hydration issues
-        if (isClient) {
-          toast.error("Failed to initialize categories page");
-        }
+        const errorMessage =
+          error &&
+          extractErrorMessage(error, "Failed to initialize categories page");
+        toast.error(errorMessage as string);
       }
     };
 
-    // Use a small delay to ensure client-side initialization
-    const timeoutId = setTimeout(initializeComponent, 0);
-    return () => clearTimeout(timeoutId);
-  }, [dispatch, isClient]);
+    initializeComponent();
+  }, [dispatch]);
 
-  const handleView = useHandleView({
-    fetchDetail: triggerGetCategory,
-    setSelectedItem: (item) => {
-      setSelectedCategory(item);
-    },
-    setViewModalOpen: (open) => {
-      if (open) {
-        setViewModalOpen(true);
-      }
-    },
-    toast,
-    isClient,
-    errorMessage: "Failed to load Category details",
-  });
-  const handleEdit = useHandleEdit({
-    setEditingItem: setEditingCategory,
-    setIsFormOpen,
-  });
-  const handleDelete = useHandleDelete({
-    setItemToDelete: setCategoryToDelete,
-    setDeleteDialogOpen,
-  });
-  // Cleanup effect for when form opens
-  useEffect(() => {
-    if (isFormOpen) {
-      // Clear any selected item when form opens to prevent confusion
-      setSelectedCategory(null);
-    }
-  }, [isFormOpen]);
   // Memoized event handlers with RTK Query mutations
   const handlers = useMemo(() => {
+    const handleView = async (category: ICategory) => {
+      setSelectedCategory(category);
+      setViewModalOpen(true);
+      try {
+        const detailed = await triggerGetCategory(category.id).unwrap();
+        setSelectedCategory(detailed);
+      } catch {
+        const errorMessage =
+          error &&
+          extractErrorMessage(error, "Failed to load category details!");
+        toast.error(errorMessage as string);
+      }
+    };
+
+    const handleEdit = (category: ICategory) => {
+      setEditingCategory(category);
+      setIsFormOpen(true);
+    };
+
+    const handleDelete = (id: string) => {
+      setCategoryToDelete(id);
+      setDeleteDialogOpen(true);
+    };
+
     const handleToggleStatus = async (id: string, current: boolean) => {
-      await handleBulkToggle([id], !current);
+      try {
+        await bulkToggle({
+          ids: [id],
+          property: "isActive",
+          value: !current,
+        }).unwrap();
+        toast.success(
+          `Category ${current ? "deactivated" : "activated"} successfully`
+        );
+      } catch (error) {
+        const errorMessage =
+          error &&
+          extractErrorMessage(error, "Failed to update category status!");
+        toast.error(errorMessage as string);
+      }
     };
 
     const handleDuplicate = async (category: ICategory) => {
+      const { _id, createdAt, updatedAt, ...rest } = category as any;
       const payload = {
         name: `${category.name} (Copy)`,
         description: `${category.description} (Copy)`,
@@ -347,46 +371,39 @@ const CategoriesContent = memo(() => {
       };
       try {
         await addCategory(payload).unwrap();
-        if (isClient) {
-          toast.success(`"${category.name}" duplicated successfully`);
-        }
+        toast.success(`"${category.name}" duplicated successfully`);
+        // RTK Query will automatically refetch due to cache invalidation
       } catch (error) {
-        console.error(error);
-        if (isClient) {
-          toast.error("Failed to duplicate category!");
-        }
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to duplicate category!");
+        toast.error(errorMessage as string);
       }
     };
 
     const handleBulkDelete = async (ids: string[]) => {
       try {
         await bulkDelete(ids).unwrap();
-        if (isClient) {
-          toast.success("Categories deleted successfully");
-        }
+        toast.success("Categories deleted successfully");
+        // RTK Query will automatically update the cache
       } catch (error) {
-        console.error("Bulk delete error:", error);
-        if (isClient) {
-          toast.error("Failed to delete categories");
-        }
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to delete categories!");
+        toast.error(errorMessage as string);
       }
     };
 
     const handleBulkToggle = async (ids: string[], active: boolean) => {
       try {
         await bulkToggle({ ids, property: "isActive", value: active }).unwrap();
-        if (isClient) {
-          toast.success(
-            `${ids.length > 1 ? `Categories` : `Category`} ${
-              active ? "Activated" : "Deactivated"
-            } Successfully`
-          );
-        }
+        toast.success(
+          `${ids.length > 1 ? `Categories` : `Category`} ${
+            active ? "Activated" : "Deactivated"
+          } Successfully`
+        );
       } catch (error) {
-        console.error("Bulk toggle error:", error);
-        if (isClient) {
-          toast.error("Failed to update category statuses!");
-        }
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to update category!");
+        toast.error(errorMessage as string);
       }
     };
 
@@ -397,18 +414,15 @@ const CategoriesContent = memo(() => {
           property: "isFeatured",
           value: featured,
         }).unwrap();
-        if (isClient) {
-          toast.success(
-            `Categories ${
-              featured ? "Added to " : "Removed From "
-            }Featured successfully`
-          );
-        }
+        toast.success(
+          `Categories ${
+            featured ? "Added to Featured" : "Removed from Featured"
+          } successfully`
+        );
       } catch (error) {
-        // console.error("Featured toggle error:", error);
-        if (isClient) {
-          toast.error("Failed to update Pin Statuses!");
-        }
+        const errorMessage =
+          error && extractErrorMessage(error, "Failed to update status!");
+        toast.error(errorMessage as string);
       }
     };
 
@@ -422,7 +436,8 @@ const CategoriesContent = memo(() => {
       handleBulkStatusToggle: handleBulkToggle,
       handleFeaturedStatusToggle: handleFeaturedToggle,
     };
-  }, [bulkDelete, bulkToggle, addCategory, triggerGetCategory, isClient]);
+  }, [bulkDelete, bulkToggle, addCategory, triggerGetCategory]);
+
   // Go to last available page on Last Item Delete
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
@@ -432,47 +447,40 @@ const CategoriesContent = memo(() => {
   // Optimized search handler
   const handleSearch = useCallback(
     (value: string) => {
-      if (!isClient) return;
-
       startTransition(() => {
         dispatch(setSearchQuery(value));
-        dispatch(setCurrentPage(1));
+        dispatch(setCurrentPage(1)); // Reset to first page on search
       });
     },
-    [dispatch, isClient]
+    [dispatch]
   );
 
-  const handleSetViewModalOpen = useCallback((open: boolean) => {
-    if (!open) {
-      setViewModalOpen(false);
-      // Clear selected item when modal closes
-      setSelectedCategory(null);
-    } else {
-      setViewModalOpen(true);
-    }
+  // Cleanup function to close modal and abort any ongoing requests
+  const closeModal = useCallback(() => {
+    setViewModalOpen(false);
   }, []);
 
-  // Form and modal handlers
+  const handleSetViewModalOpen = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        closeModal();
+      } else {
+        setViewModalOpen(true);
+      }
+    },
+    [closeModal]
+  );
+
+  // Form handlers
   const handleFormClose = useCallback((open: boolean) => {
     setIsFormOpen(open);
-    if (!open) {
-      setEditingCategory(null);
-      // Small delay to ensure smooth state transitions
-      setTimeout(() => {
-        setSelectedCategory(null);
-      }, 100);
-    }
+    if (!open) setEditingCategory(null);
   }, []);
 
   const handleModalEdit = useCallback(
     (category: ICategory) => {
-      // Clear modal state first
+      handlers.handleEditClick(category);
       setViewModalOpen(false);
-      setSelectedCategory(null);
-      // Then trigger edit with a small delay to ensure state is cleared
-      setTimeout(() => {
-        handlers.handleEditClick(category);
-      }, 50); // Increased delay slightly for better state management
     },
     [handlers]
   );
@@ -484,19 +492,16 @@ const CategoriesContent = memo(() => {
     refetch();
   }, [refetch]);
 
-  // Prefetch components only on client
   useEffect(() => {
-    if (!isClient) return;
-
     // Prefetch common heavy components on mount
     import("@/components/categories/CategoryGrid");
     import("@/components/categories/CategoryTable");
     import("@/components/categories/CategoryForm");
-  }, [isClient]);
+  }, []);
 
-  // Show enhanced skeleton during initial load or when not client-side
-  if (isLoading || !isClient) {
-    return <PageSkeleton cols={3} lgcols={4} items={12} />;
+  // Show enhanced skeleton during initial load
+  if (isLoading) {
+    return <PageSkeleton cols={3} lgcols={3} items={9} />;
   }
 
   // Loading state
@@ -511,21 +516,28 @@ const CategoriesContent = memo(() => {
         dispatch={dispatch}
         sortBy={sortBy}
         viewMode={viewMode}
-        canManageCategories={canManageCategories}
+        canAdd={canAddCategory}
         onAddNew={handleAddNew}
         loading={loading}
-        refetch={refetchCategories}
+        refetch={refetch}
       />
 
       {/* Error Message */}
-      {isError && <ErrorMessage error={error} />}
+      {error && (
+        <div className="border border-destructive bg-destructive/10 rounded-xl">
+          <p className="p-3 text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            {(error as any)?.data?.message || "Failed to load categories"}
+          </p>
+        </div>
+      )}
 
       {/* Content Area */}
       {loading && categories.length === 0 ? (
         viewMode === "grid" ? (
-          <GridSkeletonLoader cols={3} lgcols={4} items={12} />
+          <GridSkeletonLoader cols={3} lgcols={3} items={9} />
         ) : (
-          <TableSkeletonLoader cols={4} rows={9} />
+          <TableSkeletonLoader cols={3} rows={9} />
         )
       ) : categories.length > 0 ? (
         <CategoryContentView
@@ -533,60 +545,54 @@ const CategoriesContent = memo(() => {
           categories={categories}
           handlers={handlers}
           totalPages={totalPages}
+          canManage={canManageCategories}
+          canViewAllData={canViewAllData}
+          canDelete={canDeleteCategories}
         />
       ) : searchQuery ? (
         <EmptySearchState
           searchQuery={searchQuery}
           onClearSearch={handleClearSearch}
-          title="category"
-          icon={Building}
+          title="Categories"
         />
       ) : (
         <EmptyDataState
           canManage={canManageCategories}
           onAddNew={handleAddNew}
-          title="category"
-          icon={Building}
+          title="Categories"
         />
       )}
 
-      {/* Modals with Suspense - Only render on client */}
-      {isClient && (
-        <>
-          <ChunkErrorBoundaryWithSuspense>
-            <CategoryForm
-              open={isFormOpen}
-              onOpenChange={handleFormClose}
-              category={editingCategory}
-            />
-          </ChunkErrorBoundaryWithSuspense>
+      {/* Modals with Suspense */}
+      <ChunkErrorBoundaryWithSuspense fallback={null}>
+        <CategoryForm
+          open={isFormOpen}
+          onOpenChange={handleFormClose}
+          category={editingCategory}
+        />
+      </ChunkErrorBoundaryWithSuspense>
 
-          <ChunkErrorBoundaryWithSuspense>
-            <CategoryModal
-              viewModalOpen={viewModalOpen}
-              setViewModalOpen={handleSetViewModalOpen}
-              selectedCategory={selectedCategory}
-              onEdit={handleModalEdit}
-              deleteDialogOpen={deleteDialogOpen}
-              setDeleteDialogOpen={setDeleteDialogOpen}
-              categoryToDelete={categoryToDelete}
-              onCategoriesChange={refetchCategories}
-            />
-          </ChunkErrorBoundaryWithSuspense>
-        </>
-      )}
+      <ChunkErrorBoundaryWithSuspense fallback={null}>
+        <CategoryModal
+          viewModalOpen={viewModalOpen}
+          setViewModalOpen={handleSetViewModalOpen}
+          selectedCategory={selectedCategory}
+          onEdit={handleModalEdit}
+          deleteDialogOpen={deleteDialogOpen}
+          setDeleteDialogOpen={setDeleteDialogOpen}
+          categoryToDelete={categoryToDelete}
+          onCategoriesChange={refetchCategories}
+          canManage={canManageCategories}
+        />
+      </ChunkErrorBoundaryWithSuspense>
     </div>
   );
 });
 
-CategoriesContent.displayName = "CategoriesContent";
-
 // Main component with error boundary
 export const CategoriesPage = () => {
   return (
-    <ChunkErrorBoundaryWithSuspense
-      fallback={<PageSkeleton cols={3} lgcols={4} items={12} />}
-    >
+    <ChunkErrorBoundaryWithSuspense>
       <CategoriesContent />
     </ChunkErrorBoundaryWithSuspense>
   );

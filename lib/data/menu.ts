@@ -35,7 +35,7 @@ export const NAV_LINKS = [
   {
     name: "Categories",
     icon: Building,
-    permission: [PERMISSIONS.MANAGE_CATEGORIES, PERMISSIONS.VIEW_CATEGORIES],
+    permission: [PERMISSIONS.ADD_CATEGORIES, PERMISSIONS.VIEW_CATEGORIES],
     children: [
       {
         id: "categories",
@@ -49,7 +49,7 @@ export const NAV_LINKS = [
         name: "Add New Category",
         icon: Building,
         href: "/dashboard/categories/create",
-        permission: PERMISSIONS.MANAGE_CATEGORIES,
+        permission: PERMISSIONS.ADD_CATEGORIES,
         action: true,
         form: "category",
       },

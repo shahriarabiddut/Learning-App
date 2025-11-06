@@ -1,8 +1,12 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import Category from "@/models/categories.model";
-import { User } from "@/models/users.model";
+import "@/models/users.model";
 import { categorySchema } from "@/schemas/categorySchema";
-import { AuthenticatedorNot } from "@/services/dbAndPermission.service";
+import {
+  AuthenticatedorNot,
+  includeIfPermitted,
+  populateIfPermitted,
+} from "@/services/dbAndPermission.service";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -37,33 +41,34 @@ export async function GET(request: NextRequest) {
       page = 1;
     }
 
+    // Build the base query
+    const baseQuery = Category.find(query)
+      .populate({
+        path: "parentCategory",
+        select: "name",
+      })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort(sort);
+    // Conditionally populate based on permissions
+    populateIfPermitted(baseQuery, user, PERMISSIONS.ADMIN_CONTROLLED_DATA, [
+      {
+        path: "updatedBy",
+        select: "name",
+      },
+      {
+        path: "addedBy",
+        select: "name",
+      },
+    ]);
     const [rawData, total] = await Promise.all([
-      Category.find(query)
-        .populate({
-          path: "parentCategory",
-          select: "name",
-        })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .sort(sort),
+      baseQuery,
       Category.countDocuments(query),
     ]);
 
     const data = await Promise.all(
       rawData.map(async (doc) => {
         const obj = doc.toObject();
-        let userData = obj.addedBy?.toString();
-
-        if (user?.role === "admin" && obj.addedBy) {
-          try {
-            const getUser = await User.findById(obj.addedBy).select("name");
-            if (getUser) {
-              userData = getUser.name;
-            }
-          } catch (err) {
-            console.error(`Error fetching user for ${obj._id}:`, err);
-          }
-        }
 
         return {
           id: obj._id,
@@ -72,11 +77,15 @@ export async function GET(request: NextRequest) {
           imageUrl: obj.imageUrl,
           parentCategory: obj.parentCategory?._id?.toString() || null,
           parent: obj.parentCategory?.name || null,
-          featured: obj.featured,
           isActive: obj.isActive,
-          addedBy: userData,
+          ...includeIfPermitted(user, PERMISSIONS.ADMIN_CONTROLLED_DATA, {
+            addedBy: obj.addedBy?._id || obj.addedBy?.id || obj.addedBy,
+            userName: obj.addedBy?.name,
+            updatedBy: obj.updatedBy,
+            updatedAt: obj.updatedAt,
+          }),
           createdAt: obj.createdAt,
-          updatedAt: obj.updatedAt,
+          featured: obj.featured,
         };
       })
     );
@@ -98,7 +107,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
     checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_CATEGORIES,
+    Permission: PERMISSIONS.ADD_CATEGORIES,
   });
   if (user instanceof NextResponse) return user;
 
@@ -127,7 +136,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Duplicate Category Not Allowed!",
-          // "Duplicate Category Not Allowed - A category with this name already exists for this store",
+          // "Duplicate Category Not Allowed ,
         },
         { status: 409 } // 409 Conflict is appropriate for duplicate resource requests
       );

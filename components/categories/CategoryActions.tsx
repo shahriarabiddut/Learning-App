@@ -10,6 +10,8 @@ interface CategoryActionsProps {
   showtoggleButtons: boolean;
   onToggleStatus: (id: string, currentStatus: boolean) => void;
   isLoading?: boolean;
+  canManage: boolean;
+  canDelete: boolean;
 }
 
 export const CategoryActions = ({
@@ -21,6 +23,8 @@ export const CategoryActions = ({
   onToggleStatus,
   isLoading = false,
   showtoggleButtons = false,
+  canManage = false,
+  canDelete = false,
 }: CategoryActionsProps) => {
   return (
     <div
@@ -30,25 +34,36 @@ export const CategoryActions = ({
     >
       <div className="flex gap-1 md:gap-2">
         <ActionButton action="view" onClick={onView} title="View Category" />
-        <ActionButton action="edit" onClick={onEdit} title="Edit Category" />
-        <ActionButton
-          action="delete"
-          onClick={onDelete}
-          title="Delete Category"
-        />
-        <ActionButton
-          action="duplicate"
-          onClick={onDuplicate}
-          title="Duplicate Category"
+        {canManage && (
+          <>
+            <ActionButton
+              action="edit"
+              onClick={onEdit}
+              title="Edit Category"
+            />
+            {canDelete && (
+              <ActionButton
+                action="delete"
+                onClick={onDelete}
+                title="Delete Category"
+              />
+            )}
+            <ActionButton
+              action="duplicate"
+              onClick={onDuplicate}
+              title="Duplicate Category"
+              isLoading={isLoading}
+            />
+          </>
+        )}
+      </div>
+      {canManage && (
+        <ToggleStatus
+          item={category}
+          onToggleStatus={onToggleStatus}
           isLoading={isLoading}
         />
-      </div>
-
-      <ToggleStatus
-        item={category}
-        onToggleStatus={onToggleStatus}
-        isLoading={isLoading}
-      />
+      )}
     </div>
   );
 };

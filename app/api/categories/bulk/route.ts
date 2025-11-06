@@ -7,28 +7,17 @@ import {
 } from "@/services/dbAndPermission.service";
 
 export async function DELETE(request: NextRequest) {
-  const user = await AuthenticatedorNot(request, {
-    checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_CATEGORIES,
-  });
-  if (user instanceof NextResponse) return user;
-
   const body = await request.json();
   const ids = body?.ids;
 
-  if (!ids || !Array.isArray(ids)) {
-    return NextResponse.json(
-      { error: "Request must include an 'ids' array" },
-      { status: 400 }
-    );
-  }
+  const user = await AuthenticatedorNot(request, {
+    checkPermission: true,
+    Permission: PERMISSIONS.DELETE_CATEGORIES,
+    checkValidId: true,
+    IDtoCheck: ids,
+  });
+  if (user instanceof NextResponse) return user;
 
-  if (ids.some((id) => typeof id !== "string" || id.trim() === "")) {
-    return NextResponse.json(
-      { error: "All category IDs must be non-empty strings" },
-      { status: 400 }
-    );
-  }
   // If any item is demo and the user is not super admin, block deletion
   const superAdmin = isSuperAdmin(user);
   const items = await Category.find({ _id: { $in: ids } });
@@ -48,28 +37,16 @@ export async function DELETE(request: NextRequest) {
   });
 }
 export async function PATCH(request: NextRequest) {
-  const user = await AuthenticatedorNot(request, {
-    checkPermission: true,
-    Permission: PERMISSIONS.MANAGE_CATEGORIES,
-  });
-  if (user instanceof NextResponse) return user;
-
   const body = await request.json();
   const { ids, property, value } = body;
 
-  if (ids.some((id) => typeof id !== "string" || id.trim() === "")) {
-    return NextResponse.json(
-      { error: "All category IDs must be non-empty strings" },
-      { status: 400 }
-    );
-  }
-
-  if (!Array.isArray(ids)) {
-    return NextResponse.json(
-      { error: "'ids' must be an array " },
-      { status: 400 }
-    );
-  }
+  const user = await AuthenticatedorNot(request, {
+    checkPermission: true,
+    Permission: PERMISSIONS.UPDATE_CATEGORIES,
+    checkValidId: true,
+    IDtoCheck: ids,
+  });
+  if (user instanceof NextResponse) return user;
 
   if (typeof value !== "boolean") {
     return NextResponse.json(

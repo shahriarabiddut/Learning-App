@@ -1,14 +1,13 @@
 "use client";
-import { CategoryActions } from "@/components/categories/CategoryActions";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ICategory } from "@/models/categories.model";
-import Image from "next/image";
 import { useState } from "react";
 import { FaCheckCircle, FaStar } from "react-icons/fa";
 import { FaBan, FaStarHalfStroke } from "react-icons/fa6";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import { CategoryActions } from "./CategoryActions";
 
 interface CategoryGridProps {
   categories: ICategory[];
@@ -20,6 +19,9 @@ interface CategoryGridProps {
   handleBulkDelete: (ids: string[]) => void;
   handleBulkStatusToggle: (ids: string[], targetStatus: boolean) => void;
   handleFeaturedStatusToggle: (ids: string[], targetStatus: boolean) => void;
+  canManage: boolean;
+  canViewAllData: boolean;
+  canDelete: boolean;
 }
 
 export const CategoryGrid = ({
@@ -32,12 +34,15 @@ export const CategoryGrid = ({
   handleBulkDelete,
   handleBulkStatusToggle,
   handleFeaturedStatusToggle,
+  canManage = false,
+  canViewAllData = false,
+  canDelete = false,
 }: CategoryGridProps) => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
 
   // Toggle selection for a single category
-  const toggleCategorieselection = (categoryId: string) => {
+  const toggleCategorySelection = (categoryId: string) => {
     setSelectedCategories((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
@@ -90,7 +95,7 @@ export const CategoryGrid = ({
         }
       });
     } else {
-      toggleCategorieselection(categoryId);
+      toggleCategorySelection(categoryId);
       setLastCheckedIndex(index);
     }
   };
@@ -112,8 +117,8 @@ export const CategoryGrid = ({
   };
   return (
     <>
-      {selectedCategories.length > 0 && (
-        <div className="flex  flex-wrap items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3 ">
+      {selectedCategories.length > 0 && canManage && (
+        <div className="flex items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3 ">
           <span className="text-sm font-medium">
             {selectedCategories.length} selected
           </span>
@@ -124,13 +129,15 @@ export const CategoryGrid = ({
               : "Select all"}
           </Button>
 
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDeleteClick}
-          >
-            Delete selected
-          </Button>
+          {canDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDeleteClick}
+            >
+              Delete selected
+            </Button>
+          )}
 
           <Button
             variant="secondary"
@@ -173,22 +180,24 @@ export const CategoryGrid = ({
         </div>
       )}
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {categories.map((category, index) => (
           <Card
             key={category.id}
-            className="p-7 w-auto flex flex-col relative bg-card text-card-foreground"
+            className="p-7 flex flex-col relative bg-card text-card-foreground overflow-x-hidden"
           >
             {/* Checkbox */}
-            <div className="absolute top-[2%] right-[0%]">
-              <Checkbox
-                checked={selectedCategories.includes(category?.id)}
-                onCheckedChange={(checked) =>
-                  handleCheckboxChange(checked, index, category?.id)
-                }
-                className="mr-2"
-              />
-            </div>
+            {canManage && (
+              <div className="absolute top-[2%] right-[0%]">
+                <Checkbox
+                  checked={selectedCategories.includes(category?.id)}
+                  onCheckedChange={(checked) =>
+                    handleCheckboxChange(checked, index, category?.id)
+                  }
+                  className="mr-2"
+                />
+              </div>
+            )}
 
             {/* Card Content */}
             <div
@@ -215,11 +224,10 @@ export const CategoryGrid = ({
                 </Badge>
               )}
               {/* Image Container */}
-              <div className="flex-shrink-0 w-28 h-28 rounded-xl border-2 border-border bg-muted flex items-center justify-center">
+              <div className="flex-shrink-0 lg:w-32 lg:h-32 w-28 h-28 rounded-xl border-2 border-border bg-muted flex items-center justify-center">
                 {category.imageUrl ? (
                   <>
-                    <Image
-                      fill
+                    <img
                       src={category.imageUrl}
                       alt={category.name}
                       className="w-full h-full rounded-lg object-cover"
@@ -234,27 +242,37 @@ export const CategoryGrid = ({
 
               {/* Content */}
               <div className="min-w-0 flex-1 space-y-2">
-                <h2 className="text-lg font-bold text-foreground truncate capitalize">
+                <h2 className="text-lg font-bold text-foreground truncate">
                   {category.name}
                 </h2>
-                <div className="capitalize line-clamp-3">
-                  {category.description}
-                </div>
+                <p className="line-clamp-3">{category.description}</p>
+                {canViewAllData && (
+                  <div className="capitalize text-xs font-semibold">
+                    {" "}
+                    {category.store != "0"
+                      ? ` Store : ${category.store}`
+                      : "General Store"}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Actions */}
-            <CategoryActions
-              category={category}
-              onEdit={() => handleEditClick(category)}
-              onView={() => handleViewClick(category)}
-              onDelete={() => handleDeleteClick(category.id)}
-              onDuplicate={() => handleDuplicateClick(category)}
-              showtoggleButtons={true}
-              onToggleStatus={() =>
-                handleToggleStatusClick(category.id, category.isActive)
-              }
-            />
+            {canManage && (
+              <CategoryActions
+                category={category}
+                onEdit={() => handleEditClick(category)}
+                onView={() => handleViewClick(category)}
+                onDelete={() => handleDeleteClick(category.id)}
+                onDuplicate={() => handleDuplicateClick(category)}
+                showtoggleButtons={true}
+                onToggleStatus={() =>
+                  handleToggleStatusClick(category.id, category.isActive)
+                }
+                canDelete={canDelete}
+                canManage={canManage}
+              />
+            )}
           </Card>
         ))}
       </div>

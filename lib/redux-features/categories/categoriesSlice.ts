@@ -8,8 +8,11 @@ interface Categoriestate {
   searchQuery: string;
   sortBy: string;
   currentPage: number;
-  canManageCategories: boolean;
+  canUpdateCategories: boolean;
   canViewCategories: boolean;
+  canAddCategory: boolean;
+  canViewAllData: boolean;
+  canDeleteCategories: boolean;
   userRole: string | null;
   lastUserRoleUpdate: number;
 }
@@ -20,8 +23,11 @@ const initialState: Categoriestate = {
   searchQuery: "",
   sortBy: "createdAt-desc",
   currentPage: 1,
-  canManageCategories: false,
+  canUpdateCategories: false,
+  canAddCategory: false,
   canViewCategories: false,
+  canViewAllData: false,
+  canDeleteCategories: false,
   userRole: null,
   lastUserRoleUpdate: 0,
 };
@@ -109,13 +115,23 @@ const saveUISettings = (settings: Partial<Categoriestate>) => {
 const calculatePermissions = (userRole: string | null | undefined) => {
   const role = userRole || null;
   return {
-    canManageCategories: hasPermission(
+    canUpdateCategories: hasPermission(
       role as UserRole,
-      PERMISSIONS.MANAGE_CATEGORIES
+      PERMISSIONS.UPDATE_CATEGORIES
     ),
     canViewCategories: hasPermission(
       role as UserRole,
       PERMISSIONS.VIEW_CATEGORIES
+    ),
+    canAddCategory: hasPermission(role as UserRole, PERMISSIONS.ADD_CATEGORIES),
+
+    canDeleteCategories: hasPermission(
+      role as UserRole,
+      PERMISSIONS.DELETE_CATEGORIES
+    ),
+    canViewAllData: hasPermission(
+      role as UserRole,
+      PERMISSIONS.ADMIN_CONTROLLED_DATA
     ),
   };
 };
@@ -163,8 +179,11 @@ const categorieslice = createSlice({
 
         // Recalculate permissions
         const permissions = calculatePermissions(normalizedRole);
-        state.canManageCategories = permissions.canManageCategories;
+        state.canUpdateCategories = permissions.canUpdateCategories;
+        state.canAddCategory = permissions.canAddCategory;
         state.canViewCategories = permissions.canViewCategories;
+        state.canViewAllData = permissions.canViewAllData;
+        state.canDeleteCategories = permissions.canDeleteCategories;
       }
     },
     // Batch update for better performance
@@ -238,8 +257,11 @@ export const loadInitialCategoryUIState = (): Categoriestate => {
     // Clear search query on app start
     searchQuery: "",
     // Permissions will be set when user data loads
-    canManageCategories: false,
+    canUpdateCategories: false,
+    canAddCategory: false,
     canViewCategories: false,
+    canViewAllData: false,
+    canDeleteCategories: false,
     userRole: null,
     lastUserRoleUpdate: 0,
   };
@@ -263,22 +285,31 @@ export const selectCategoryPagination = (state: {
 export const selectCategoriesortBy = (state: { categories: Categoriestate }) =>
   state.categories.sortBy;
 
-// NEW: Permission selectors
+// Permission selectors
 export const selectCategoryPermissions = (state: {
   categories: Categoriestate;
 }) => ({
-  canManageCategories: state.categories.canManageCategories,
+  canUpdateCategories: state.categories.canUpdateCategories,
+  canAddCategory: state.categories.canAddCategory,
   canViewCategories: state.categories.canViewCategories,
+  canViewAllData: state.categories.canViewAllData,
+  canDeleteCategories: state.categories.canDeleteCategories,
   userRole: state.categories.userRole,
   lastUpdated: state.categories.lastUserRoleUpdate,
 });
 
-export const selectCanManageCategories = (state: {
+export const selectCanUpdateCategories = (state: {
   categories: Categoriestate;
-}) => state.categories.canManageCategories;
-
+}) => state.categories.canUpdateCategories;
+export const selectCanAddCategory = (state: { categories: Categoriestate }) =>
+  state.categories.canAddCategory;
 export const selectCanViewCategories = (state: {
   categories: Categoriestate;
 }) => state.categories.canViewCategories;
+export const selectCanViewAllData = (state: { categories: Categoriestate }) =>
+  state.categories.canViewAllData;
+export const selectCanDeleteCategories = (state: {
+  categories: Categoriestate;
+}) => state.categories.canDeleteCategories;
 
 export default categorieslice.reducer;
