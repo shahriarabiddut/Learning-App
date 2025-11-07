@@ -1,25 +1,30 @@
 "use client";
 
-import { CONTACT_ADDRESS, SITE_DEFAULTS } from "@/lib/constants/env";
+import {
+  CONTACT_ADDRESS,
+  SITE_DEFAULTS,
+  SITE_FACEBOOK,
+  SITE_INSTAGRAM,
+  SITE_LINKEDIN,
+  XHandle,
+} from "@/lib/constants/env";
 import { formatAddress } from "@/lib/helper/clientHelper";
 import { useFetchCategoriesQuery } from "@/lib/redux-features/categories/categoriesApi";
 import {
-  Mail,
-  Phone,
-  MapPin,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Instagram,
+  ArrowRight,
+  Award,
   BookOpen,
   GraduationCap,
-  Award,
+  Mail,
+  MapPin,
+  Phone,
   Users,
-  ArrowRight,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
+import { FaFacebook, FaInstagram, FaLinkedin } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -40,7 +45,7 @@ export default function Footer() {
   }, [categoriesData]);
 
   const quickLinks = [
-    { name: "All Courses", href: "/courses" },
+    { name: "All Lessons", href: "/lessons" },
     { name: "Become Instructor", href: "/instructor/apply" },
     { name: "Success Stories", href: "/success-stories" },
     { name: "Help Center", href: "/help" },
@@ -56,32 +61,36 @@ export default function Footer() {
   const socialLinks = [
     {
       name: "Facebook",
-      href: "#",
-      icon: <Facebook className="w-5 h-5" />,
+      href: SITE_FACEBOOK,
+      icon: <FaFacebook className="w-5 h-5" />,
       color: "hover:bg-blue-600",
+      show: SITE_FACEBOOK !== "",
     },
     {
       name: "Twitter",
-      href: "#",
-      icon: <Twitter className="w-5 h-5" />,
+      href: XHandle,
+      icon: <FaXTwitter className="w-5 h-5" />,
       color: "hover:bg-sky-500",
+      show: XHandle !== "",
     },
     {
       name: "LinkedIn",
-      href: "#",
-      icon: <Linkedin className="w-5 h-5" />,
+      href: SITE_LINKEDIN,
+      icon: <FaLinkedin className="w-5 h-5" />,
       color: "hover:bg-blue-700",
+      show: SITE_LINKEDIN !== "",
     },
     {
       name: "Instagram",
-      href: "#",
-      icon: <Instagram className="w-5 h-5" />,
+      href: SITE_INSTAGRAM,
+      icon: <FaInstagram className="w-5 h-5" />,
       color: "hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600",
+      show: SITE_INSTAGRAM !== "",
     },
   ];
 
   const stats = [
-    { icon: <BookOpen className="w-5 h-5" />, value: "10K+", label: "Courses" },
+    { icon: <BookOpen className="w-5 h-5" />, value: "10K+", label: "Lessons" },
     { icon: <Users className="w-5 h-5" />, value: "100K+", label: "Students" },
     {
       icon: <GraduationCap className="w-5 h-5" />,
@@ -149,7 +158,7 @@ export default function Footer() {
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
               Empowering learners worldwide with high-quality education. Join
               thousands of students achieving their goals through expert-led
-              courses.
+              lessons.
             </p>
 
             {/* Contact Information */}
@@ -192,17 +201,21 @@ export default function Footer() {
 
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-4">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`p-3 rounded-xl bg-slate-800 dark:bg-slate-900 text-slate-400 hover:text-white transition-all duration-300 ${social.color}`}
-                  aria-label={social.name}
-                >
-                  {social.icon}
-                </a>
+              {socialLinks.map((social, index) => (
+                <Fragment key={index}>
+                  {social.show && (
+                    <a
+                      key={social.name}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`p-3 rounded-xl bg-slate-800 dark:bg-slate-900 text-slate-400 hover:text-white transition-all duration-300 ${social.color}`}
+                      aria-label={social.name}
+                    >
+                      {social.icon}
+                    </a>
+                  )}
+                </Fragment>
               ))}
             </div>
           </div>
@@ -273,23 +286,6 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-
-            {/* Newsletter Signup */}
-            <div className="pt-4">
-              <p className="text-xs text-slate-400 mb-3">
-                Subscribe to our newsletter
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  className="flex-1 px-4 py-2 text-sm bg-slate-800 dark:bg-slate-900 border border-slate-700 dark:border-slate-800 rounded-lg text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <button className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>

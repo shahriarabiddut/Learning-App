@@ -27,6 +27,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CommentsSection } from "../../blogpost/CommentSection";
 import { RelatedPosts } from "../../blogpost/RelatedPosts";
+import { getCategoryName } from "@/lib/helper/clientHelperfunc";
 
 interface BlogPostViewProps {
   initialPost: IBlogPost & {
@@ -62,22 +63,14 @@ function formatFullDate(date: string | Date | undefined): string {
 
 export function BlogPostView({ initialPost }: BlogPostViewProps) {
   const post = initialPost;
-  const relatedPosts = post.relatedPosts || [];
+  const relatedPosts = post?.relatedPosts || [];
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  const getCategoryName = () => {
-    if (!post.categories || post.categories.length === 0)
-      return "Uncategorized";
-    return typeof post.categories[0] === "string"
-      ? post.categories[0]
-      : post.categories[0]?.name || "Uncategorized";
-  };
-
   const handleShare = async (platform?: string) => {
     const url = window.location.href;
-    const title = post.title;
-    const text = post.excerpt || "";
+    const title = post?.title;
+    const text = post?.excerpt || "";
 
     if (platform === "twitter") {
       window.open(
@@ -132,7 +125,7 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
           <div className="absolute bottom-20 left-10 w-96 h-96 bg-teal-500/30 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-slate-400 mb-8">
             <Link href="/" className="hover:text-emerald-400 transition-colors">
@@ -146,15 +139,15 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
               Blog
             </Link>
             <span>/</span>
-            <span className="text-slate-300">{post.title}</span>
+            <span className="text-slate-300">{post?.title}</span>
           </nav>
 
           {/* Category Badge */}
           <div className="flex items-center gap-3 mb-6">
             <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 px-4 py-1.5 text-sm font-semibold">
-              {getCategoryName()}
+              {getCategoryName(post?.categories)}
             </Badge>
-            {post.isFeatured && (
+            {post?.isFeatured && (
               <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0 px-4 py-1.5 text-sm font-semibold flex items-center gap-1">
                 <svg
                   className="w-4 h-4"
@@ -170,39 +163,25 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
 
           {/* Title */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-            {post.title}
+            {post?.title}
           </h1>
-
-          {/* Excerpt */}
-          {post.excerpt && (
-            <p className="text-xl text-slate-300 mb-8 leading-relaxed max-w-3xl">
-              {post.excerpt}
-            </p>
-          )}
 
           {/* Meta Info */}
           <div className="flex flex-wrap items-center gap-6 text-slate-300">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-lg">
-                {post.authorName?.charAt(0) || "A"}
-              </div>
-              <div>
-                <p className="font-semibold text-white">
-                  {post.authorName || "Anonymous"}
-                </p>
-                <p className="text-sm text-slate-400">
-                  {formatFullDate(post.publishedAt || post.createdAt)}
-                </p>
-              </div>
+              <Calendar className="w-5 h-5 text-emerald-400" />
+              <span>
+                {formatFullDate(post?.publishedAt || post?.createdAt)}
+              </span>
             </div>
             <div className="h-8 w-px bg-slate-700"></div>
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-emerald-400" />
-              <span>{post.readingTime || "5 min read"}</span>
+              <span>{post?.readingTime || "5 min read"}</span>
             </div>
             <div className="flex items-center gap-2">
               <Eye className="w-5 h-5 text-emerald-400" />
-              <span>{post.views || 0} views</span>
+              <span>{post?.views || 0} views</span>
             </div>
           </div>
 
@@ -270,11 +249,11 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
       <article className="bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* Featured Image */}
-          {post.featuredImage && (
+          {post?.featuredImage && (
             <div className="relative h-[500px] w-full rounded-2xl overflow-hidden mb-12 shadow-2xl border-4 border-white dark:border-slate-800">
               <Image
-                src={post.featuredImage}
-                alt={post.title}
+                src={post?.featuredImage}
+                alt={post?.title}
                 fill
                 className="object-cover"
                 priority
@@ -283,11 +262,11 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
           )}
 
           {/* Tags */}
-          {post.tags && post.tags.length > 0 && (
+          {post?.tags && post?.tags.length > 0 && (
             <div className="mb-8 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800">
               <div className="flex flex-wrap items-center gap-2">
                 <Tag className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                {post.tags.map((tag, index) => (
+                {post?.tags.map((tag, index) => (
                   <Badge
                     key={index}
                     className="bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
@@ -301,33 +280,33 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
 
           {/* Post Content */}
           <div className="prose prose-lg max-w-none mb-16 text-slate-700 dark:text-slate-300 prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white prose-code:text-emerald-600 dark:prose-code:text-emerald-400">
-            {post.contentType === "blocks" && post.contentBlocks ? (
-              <RichTextDisplay content={JSON.stringify(post.contentBlocks)} />
+            {post?.contentType === "blocks" && post?.contentBlocks ? (
+              <RichTextDisplay content={JSON.stringify(post?.contentBlocks)} />
             ) : (
-              <RichTextDisplay content={post.content || ""} />
+              <RichTextDisplay content={post?.content || ""} />
             )}
           </div>
 
           {/* Author Card */}
-          {post.authorName && (
+          {post?.authorName && (
             <Card className="mb-16 border-2 border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 shadow-lg">
               <CardContent className="p-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                   <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 flex-shrink-0 shadow-xl bg-gradient-to-br from-emerald-500 to-teal-600">
                     <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white">
-                      {post.authorName.charAt(0).toUpperCase()}
+                      {post?.authorName.charAt(0).toUpperCase()}
                     </div>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-slate-900 dark:text-white text-xl mb-1">
-                      {post.authorName}
+                      {post?.authorName}
                     </h3>
                     <p className="text-slate-600 dark:text-slate-400 mb-4">
                       Passionate educator sharing knowledge and insights to help
                       learners grow
                     </p>
                     <div className="flex gap-2">
-                      <Link href={`/author/${post.author}`}>
+                      <Link href={`/author/${post?.author}`}>
                         <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg">
                           View Profile
                         </Button>
@@ -350,9 +329,9 @@ export function BlogPostView({ initialPost }: BlogPostViewProps) {
 
           {/* Comments Section */}
           <CommentsSection
-            postId={post.id}
-            comments={post.comments}
-            allowComments={post.allowComments}
+            postId={post?.id}
+            comments={post?.comments}
+            allowComments={post?.allowComments}
           />
         </div>
       </article>

@@ -22,7 +22,7 @@ function renderCategoryJsonLd(category: ICategory, baseUrl: string) {
     "@type": "CollectionPage",
     name: category.name,
     description:
-      category.description || `Browse ${category.name} courses and articles`,
+      category.description || `Browse ${category.name} lessons and articles`,
     url: `${baseUrl}/category/${category.id}`,
     image: category.imageUrl ? [category.imageUrl] : [],
     publisher: {
@@ -49,7 +49,7 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { id } = await params;
   const category = await fetchCategory(id);
-  const baseUrl = SITE_DEFAULTS.url || "https://yoursite.com";
+  const baseUrl = SITE_DEFAULTS.url || "";
   const canonical = `${baseUrl}/category/${category.id}`;
 
   // Merge any parent Open Graph images
@@ -59,23 +59,23 @@ export async function generateMetadata(
     : parentMeta.openGraph?.images ?? [];
 
   // Construct SEO title and description
-  const seoTitle = `${category.name} Courses & Articles | ${
+  const seoTitle = `${category.name} lessons & Articles | ${
     SITE_DEFAULTS.title || SITE_NAME
   }`;
   const seoDescription =
     category.description ||
     `Explore ${
       category.name
-    } courses and educational content. Learn from expert instructors on ${
+    } lessons and educational content. Learn from expert instructors on ${
       SITE_DEFAULTS.title || SITE_NAME
     }.`;
 
   const seoKeywords = [
     category.name,
-    `${category.name} courses`,
+    `${category.name} lessons`,
     `${category.name} tutorials`,
     `${category.name} learning`,
-    "online courses",
+    "online lessons",
     "e-learning",
     SITE_DEFAULTS.title || SITE_NAME,
   ];
@@ -126,7 +126,7 @@ export default async function CategoryPage(context: {
 }) {
   const params = await context.params;
   const category = await fetchCategory(params.id);
-  const baseUrl = SITE_DEFAULTS.url || "https://yoursite.com";
+  const baseUrl = SITE_DEFAULTS.url || "";
 
   return (
     <>
@@ -195,7 +195,7 @@ export default async function CategoryPage(context: {
         strategy="beforeInteractive"
       />
 
-      {/* ItemList JSON-LD for courses in category */}
+      {/* ItemList JSON-LD for lessons in category */}
       <Script
         id="itemlist-jsonld"
         type="application/ld+json"
@@ -203,7 +203,7 @@ export default async function CategoryPage(context: {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "ItemList",
-            name: `${category.name} Courses`,
+            name: `${category.name} lessons`,
             description: category.description,
             numberOfItems: category.postCount || 0,
             itemListElement: [], // Will be populated by posts

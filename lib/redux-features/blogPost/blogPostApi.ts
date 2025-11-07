@@ -37,7 +37,28 @@ interface TopAuthorsParams {
   limit?: number;
   sortBy?: "views" | "posts" | "followers";
 }
+interface CategoryPostsParams {
+  categoryId: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+}
 
+interface PaginatedCategoryPosts {
+  data: IBlogPost[];
+  page: number;
+  total: number;
+  totalPages: number;
+  limit: number;
+  category?: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    imageUrl?: string;
+    featured?: boolean;
+  } | null;
+}
 // Extended fetch params for blog posts with additional filters
 interface BlogPostFetchParams extends FetchParams {
   status?: "draft" | "published" | "archived" | "all";
@@ -385,6 +406,7 @@ export const blogPostApi = createApi({
         }
         if (params.sortBy) searchParams.set("sortBy", params.sortBy);
         if (params.current) searchParams.set("current", params.current);
+        if (params.featured) searchParams.set("featured", params.featured);
         return `/category?${searchParams.toString()}`;
       },
       providesTags: (result, error) => {
@@ -438,6 +460,88 @@ export const blogPostApi = createApi({
         return { message: "Failed to fetch categories" };
       },
     }),
+
+    fetchCategoryPosts: build.query<
+      PaginatedCategoryPosts,
+      CategoryPostsParams
+    >({
+      query: ({
+        categoryId,
+        page = 1,
+        limit = 12,
+        sortBy = "createdAt-desc",
+      }) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("page", String(Math.max(page, 1)));
+        searchParams.set("limit", String(Math.min(Math.max(limit, 1), 100)));
+
+        if (sortBy) {
+          searchParams.set("sortBy", sortBy);
+        }
+
+        return `/category/${categoryId}?${searchParams.toString()}`;
+      },
+      providesTags: (result, error, { categoryId }) => {
+        if (error) return [{ type: "BlogPosts", id: `CATEGORY-${categoryId}` }];
+        const tags: any[] = [
+          { type: "BlogPosts", id: `CATEGORY-${categoryId}` },
+          { type: "BlogPosts", id: "LIST" },
+        ];
+        result?.data?.forEach((post) =>
+          tags.push({ type: "BlogPosts", id: post.id })
+        );
+        return tags;
+      },
+      transformResponse: (response: any): PaginatedCategoryPosts => {
+        const mapItem = (item: any) => {
+          if (!item) return item;
+          return {
+            ...item,
+            id: item.id ?? item._id ?? String(Math.random()).slice(2),
+          } as IBlogPost;
+        };
+
+        if (response?.data) {
+          const arr = Array.isArray(response.data)
+            ? response.data.map(mapItem)
+            : [];
+          const page = Math.max(response.page || 1, 1);
+          const total = Math.max(response.total ?? 0, 0);
+          const totalPages = Math.max(response.totalPages ?? 0, 0);
+          const limit = Math.max(response.limit || 12, 1);
+
+          return {
+            data: arr,
+            page,
+            total,
+            totalPages,
+            limit,
+            category: response.category || null,
+          };
+        }
+
+        return {
+          data: [],
+          page: 1,
+          total: 0,
+          totalPages: 0,
+          limit: 12,
+          category: null,
+        };
+      },
+      transformErrorResponse: (response: any) => {
+        if (typeof response?.data === "string") {
+          try {
+            const parsed = JSON.parse(response.data);
+            return parsed?.error ?? null;
+          } catch {
+            return response.data;
+          }
+        }
+        return { message: "Failed to fetch category posts" };
+      },
+    }),
+
     getBlogPostById: build.query<IBlogPost, string>({
       query: (id) => `/${id}`,
       providesTags: (_result, _error, id) => [
@@ -1250,4 +1354,5 @@ export const {
   useFetchPostCommentsQuery,
   useBulkUpdateCommentsMutation,
   useBulkDeleteCommentsMutation,
+  useFetchCategoryPostsQuery,
 } = blogPostApi;

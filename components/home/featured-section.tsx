@@ -1,35 +1,22 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import Link from "next/link";
-import Image from "next/image";
+import { Card } from "@/components/ui/card";
+import { getCategoryName } from "@/lib/helper/clientHelperfunc";
+import { useFetchFeaturedPostsQuery } from "@/lib/redux-features/blogPost/blogPostApi";
+import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
-  Clock,
-  Calendar,
-  User,
   ArrowRight,
+  Award,
+  Calendar,
+  Clock,
   Loader2,
   Star,
   TrendingUp,
-  Award,
+  User,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { useFetchFeaturedPostsQuery } from "@/lib/redux-features/blogPost/blogPostApi";
-
-interface Post {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  featuredImage?: string;
-  authorName?: string;
-  publishedAt?: string;
-  createdAt: string;
-  content?: string;
-  readingTime?: string;
-  categories?: Array<{ name: string }>;
-}
+import Image from "next/image";
+import Link from "next/link";
 
 function formatDate(date: string | Date): string {
   try {
@@ -37,11 +24,6 @@ function formatDate(date: string | Date): string {
   } catch {
     return "Recently";
   }
-}
-
-function getCategoryName(categories?: Array<{ name: string }>): string {
-  if (!categories || categories.length === 0) return "General";
-  return categories[0]?.name || "General";
 }
 
 function calculateReadTime(content: string = ""): string {
@@ -137,14 +119,14 @@ export default function FeaturedSection() {
             className="lg:col-span-8"
           >
             <Link
-              href={`/post/${mainPost.slug}`}
+              href={`/post/${mainPost?.slug}`}
               className="group block h-full"
             >
-              <Card className="h-full hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 bg-white dark:bg-slate-800/50 backdrop-blur-sm relative">
-                <div className="relative h-[450px] md:h-[600px] w-full overflow-hidden">
+              <Card className="h-full hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 bg-white dark:bg-slate-800/50 backdrop-blur-sm relative p-0">
+                <div className="relative h-full w-full overflow-hidden ">
                   <Image
-                    src={mainPost.featuredImage || "/placeholder.svg"}
-                    alt={mainPost.title}
+                    src={mainPost?.featuredImage || "/placeholder.svg"}
+                    alt={mainPost?.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
@@ -162,12 +144,12 @@ export default function FeaturedSection() {
                   <div className="absolute bottom-0 left-0 right-0 p-8 md:p-10">
                     <div className="flex items-center gap-3 mb-4 flex-wrap">
                       <span className="inline-block text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-full shadow-lg">
-                        {getCategoryName(mainPost.categories)}
+                        {getCategoryName(mainPost?.categories)}
                       </span>
                       <span className="text-white/90 text-sm flex items-center gap-1.5 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <Clock className="w-4 h-4" />
-                        {mainPost.readingTime ||
-                          calculateReadTime(mainPost.content)}
+                        {mainPost?.readingTime ||
+                          calculateReadTime(mainPost?.content)}
                       </span>
                       <span className="text-white/90 text-sm flex items-center gap-1.5 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <TrendingUp className="w-4 h-4" />
@@ -176,23 +158,23 @@ export default function FeaturedSection() {
                     </div>
 
                     <h3 className="text-3xl md:text-4xl font-bold mb-4 text-white line-clamp-2 group-hover:text-emerald-300 transition-colors duration-300">
-                      {mainPost.title}
+                      {mainPost?.title}
                     </h3>
 
                     <p className="text-white/90 text-base md:text-lg mb-6 line-clamp-2 leading-relaxed">
-                      {mainPost.excerpt}
+                      {mainPost?.excerpt}
                     </p>
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-white/80">
                         <span className="flex items-center gap-2">
                           <User className="w-4 h-4" />
-                          {mainPost.authorName || "Expert Instructor"}
+                          {mainPost?.authorName || "Expert Instructor"}
                         </span>
                         <span className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           {formatDate(
-                            mainPost.publishedAt || mainPost.createdAt
+                            mainPost?.publishedAt || mainPost?.createdAt
                           )}
                         </span>
                       </div>
@@ -222,7 +204,7 @@ export default function FeaturedSection() {
                   href={`/post/${post.slug}`}
                   className="group block h-full"
                 >
-                  <Card className="h-full hover:shadow-xl transition-all duration-500 overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:translate-y-[-4px] bg-white dark:bg-slate-800/50 backdrop-blur-sm">
+                  <Card className="h-full hover:shadow-xl transition-all duration-500 overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:translate-y-[-4px] bg-white dark:bg-slate-800/50 backdrop-blur-sm p-0">
                     <div className="relative h-[180px] w-full overflow-hidden">
                       <Image
                         src={post.featuredImage || "/placeholder.svg"}

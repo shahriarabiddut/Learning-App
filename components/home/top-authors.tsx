@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,23 +8,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion } from "framer-motion";
-import { Users, Award, BookOpen, Star, ArrowRight } from "lucide-react";
 import { useFetchTopAuthorsQuery } from "@/lib/redux-features/blogPost/blogPostApi";
-
-interface Author {
-  id: string;
-  name: string;
-  bio: string;
-  image?: string;
-  posts: number;
-  followers: number;
-  rank: number;
-}
+import { motion } from "framer-motion";
+import { ArrowRight, Award, BookOpen, Star, Users } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export default function TopAuthors() {
   const { data, isLoading, isError } = useFetchTopAuthorsQuery({
@@ -55,7 +45,7 @@ export default function TopAuthors() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-400 px-4 py-2 rounded-full mb-4">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-100 to-emerald-100 dark:from-cyan-900/30 dark:to-emerald-900/30 text-cyan-700 dark:text-cyan-400 px-4 py-2 rounded-full mb-4">
             <Users className="w-4 h-4" />
             <span className="text-sm font-semibold">Expert Instructors</span>
           </div>
@@ -103,7 +93,7 @@ export default function TopAuthors() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {data?.map((author: Author, index: number) => (
+            {data?.map((author, index) => (
               <motion.div
                 key={author.id}
                 initial={{ opacity: 0, y: 30 }}
@@ -169,7 +159,7 @@ export default function TopAuthors() {
                           </p>
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                          Courses
+                          Lessons
                         </p>
                       </div>
                       <div>

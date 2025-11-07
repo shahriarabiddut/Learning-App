@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BlogPostActions } from "./BlogPostActions";
 import { Calendar, Clock, Eye, FileText, User } from "lucide-react";
 import Image from "next/image";
+import { formatDate } from "@/lib/helper/clientHelperfunc";
 
 interface BlogPostTableProps {
   blogposts: IBlogPost[];
@@ -115,16 +116,6 @@ export const BlogPostTable = ({
   // Handle Featured Click
   const handleFeaturedClick = (targetStatus: boolean) => {
     handleFeaturedStatusToggle(selectedBlogPosts, targetStatus);
-  };
-
-  // Format date
-  const formatDate = (date: string | Date | undefined) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
   };
 
   // Get status badge
@@ -362,7 +353,10 @@ export const BlogPostTable = ({
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        {formatDate(blogpost.publishedAt || blogpost.createdAt)}
+                        {formatDate(
+                          blogpost.publishedAt || blogpost.createdAt,
+                          true
+                        )}
                       </span>
                     </div>
                   </TableCell>

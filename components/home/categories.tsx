@@ -22,11 +22,18 @@ export default function Categories() {
     isError,
   } = useFetchPostCategoriesQuery({
     page: 1,
-    limit: 6,
-    sortBy: "name-asc",
+    limit: 12,
+    sortBy: "postCount-desc",
   });
 
-  const categories: Category[] = categoriesData?.data || [];
+  let categories: Category[] = categoriesData?.data || [];
+
+  // Client-side sort fallback if API doesn't sort by postCount (ensures "highest" display)
+  if (categories.some((cat) => cat.postCount !== undefined)) {
+    categories = [...categories].sort(
+      (a, b) => (b.postCount || 0) - (a.postCount || 0)
+    );
+  }
 
   const getCategoryGradient = (index: number) => {
     const gradients = [
@@ -111,11 +118,11 @@ export default function Categories() {
         </motion.div>
 
         {/* Bento grid layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 auto-rows-fr">
           {categories.map((category, index) => {
-            // First item spans 2 columns on large screens
-            const isLarge = index === 0;
-            const isMedium = index === 1 || index === 2;
+            // Repeat large pattern every 6 for bento asymmetry, prioritizing higher postCount ones
+            const isLarge = index % 6 === 0;
+            const isMedium = index % 6 === 1 || index % 6 === 2;
 
             return (
               <motion.div
@@ -129,7 +136,7 @@ export default function Categories() {
                 }`}
               >
                 <Link href={`/category/${category.slug || category.id}`}>
-                  <Card className="h-full group relative overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/20 bg-white dark:bg-slate-800/50 backdrop-blur-sm">
+                  <Card className="h-full group relative overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/20 bg-white dark:bg-slate-800/50 backdrop-blur-sm p-0">
                     <CardContent className="p-0 relative h-full min-h-[280px] flex flex-col">
                       {/* Background image with overlay */}
                       <div className="absolute inset-0">
@@ -139,6 +146,7 @@ export default function Categories() {
                             alt={category.name}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-700"
+                            priority={index < 3} // Optimize LCP for top categories
                           />
                         ) : (
                           <div
@@ -171,7 +179,10 @@ export default function Categories() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="text-2xl md:text-3xl font-bold text-white mb-3 group-hover:text-emerald-300 transition-colors duration-300">
+                        <h3
+                          className="text-2xl font-bold text-white mb-3 group-hover:text-emerald-300 transition-colors duration-300 truncate"
+                          title={category.name}
+                        >
                           {category.name}
                         </h3>
 
@@ -179,7 +190,7 @@ export default function Categories() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-emerald-400 text-sm font-semibold bg-emerald-400/10 backdrop-blur-sm px-3 py-1.5 rounded-full border border-emerald-400/30">
-                              {category.postCount || 0} courses
+                              {category.postCount || 0} lessons
                             </span>
                           </div>
                           <ArrowRight className="w-5 h-5 text-white group-hover:translate-x-2 transition-transform duration-300" />

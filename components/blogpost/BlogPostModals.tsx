@@ -24,6 +24,7 @@ import { useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { toast } from "sonner";
 import { CommentsManagement } from "./CommentsManagement";
+import { formatDate } from "@/lib/helper/clientHelperfunc";
 
 interface BlogPostModalProps {
   viewModalOpen: boolean;
@@ -66,18 +67,6 @@ export const BlogPostModal = ({
       setIsDeleting(false);
       setDeleteDialogOpen(false);
     }
-  };
-
-  // Format date
-  const formatDate = (date: string | Date | undefined) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   // Get status badge
@@ -188,7 +177,9 @@ export const BlogPostModal = ({
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium">Published:</span>
-                      <span>{formatDate(selectedBlogPost.publishedAt)}</span>
+                      <span>
+                        {formatDate(selectedBlogPost.publishedAt, false)}
+                      </span>
                     </div>
                   )}
 

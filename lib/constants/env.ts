@@ -33,7 +33,7 @@ export const DEFAULT_KEYWORDS =
   [
     "blog",
     "learning",
-    "courses",
+    "lessons",
     "tutorials",
     "education",
     "development",
@@ -69,14 +69,10 @@ export const SENDER_EMAIL =
 
 // Social
 export const XHandle = process.env.NEXT_PUBLIC_XHandle || "";
-export const SITE_FACEBOOK =
-  process.env.NEXT_PUBLIC_SITE_FACEBOOK || "https://www.facebook.com/";
-export const SITE_LINKEDIN =
-  process.env.NEXT_PUBLIC_SITE_LINKEDIN || "https://www.linkedin.com/";
-export const SITE_PINTEREST =
-  process.env.NEXT_PUBLIC_SITE_PINTEREST || "https://www.pinterest.com/";
-export const SITE_INSTAGRAM =
-  process.env.NEXT_PUBLIC_SITE_INSTAGRAM || "https://www.instagram.com/";
+export const SITE_FACEBOOK = process.env.NEXT_PUBLIC_SITE_FACEBOOK || "";
+export const SITE_LINKEDIN = process.env.NEXT_PUBLIC_SITE_LINKEDIN || "";
+export const SITE_PINTEREST = process.env.NEXT_PUBLIC_SITE_PINTEREST || "";
+export const SITE_INSTAGRAM = process.env.NEXT_PUBLIC_SITE_INSTAGRAM || "";
 
 // OAuth Credentials and Permissions
 // Github - OAuth

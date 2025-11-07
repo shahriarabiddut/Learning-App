@@ -8,11 +8,11 @@ import SingleCategoryPage from "@/components/pages/public/SingleCategoryPage";
 // Fetch category by ID or slug
 const fetchCategory = async (id: string): Promise<ICategory> => {
   const res = await fetch(`${API_SITE_URL}/posts/category/${id}`, {
-    next: { revalidate: 3600 }, // revalidate every hour
+    next: { revalidate: 3600 },
   });
   if (!res.ok) notFound();
   const data = await res.json();
-  return data;
+  return data.category;
 };
 
 // Helper to generate JSON-LD for a Category
@@ -22,7 +22,7 @@ function renderCategoryJsonLd(category: ICategory, baseUrl: string) {
     "@type": "CollectionPage",
     name: category.name,
     description:
-      category.description || `Browse ${category.name} courses and articles`,
+      category.description || `Browse ${category.name} lessons and articles`,
     url: `${baseUrl}/category/${category.id}`,
     image: category.imageUrl ? [category.imageUrl] : [],
     publisher: {
@@ -59,23 +59,23 @@ export async function generateMetadata(
     : parentMeta.openGraph?.images ?? [];
 
   // Construct SEO title and description
-  const seoTitle = `${category.name} Courses & Articles | ${
+  const seoTitle = `${category.name} Lessons & Articles | ${
     SITE_DEFAULTS.title || SITE_NAME
   }`;
   const seoDescription =
     category.description ||
     `Explore ${
       category.name
-    } courses and educational content. Learn from expert instructors on ${
+    } lessons and educational content. Learn from expert instructors on ${
       SITE_DEFAULTS.title || SITE_NAME
     }.`;
 
   const seoKeywords = [
     category.name,
-    `${category.name} courses`,
+    `${category.name} lessons`,
     `${category.name} tutorials`,
     `${category.name} learning`,
-    "online courses",
+    "online lessons",
     "e-learning",
     SITE_DEFAULTS.title || SITE_NAME,
   ];
@@ -126,7 +126,7 @@ export default async function CategoryPage(context: {
 }) {
   const params = await context.params;
   const category = await fetchCategory(params.id);
-  const baseUrl = SITE_DEFAULTS.url || "https://yoursite.com";
+  const baseUrl = SITE_DEFAULTS.url || "";
 
   return (
     <>
@@ -195,7 +195,7 @@ export default async function CategoryPage(context: {
         strategy="beforeInteractive"
       />
 
-      {/* ItemList JSON-LD for courses in category */}
+      {/* ItemList JSON-LD for lessons in category */}
       <Script
         id="itemlist-jsonld"
         type="application/ld+json"
@@ -203,9 +203,9 @@ export default async function CategoryPage(context: {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "ItemList",
-            name: `${category.name} Courses`,
+            name: `${category.name} Lessons`,
             description: category.description,
-            numberOfItems: category.postCount || 0,
+            numberOfItems: category?.postCount || 0,
             itemListElement: [], // Will be populated by posts
           }),
         }}

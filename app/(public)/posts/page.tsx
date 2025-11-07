@@ -1,26 +1,26 @@
+import LatestPostsPage from "@/components/pages/public/LatestPostPage";
 import { SITE_DEFAULTS, SITE_NAME } from "@/lib/constants/env";
 import type { Metadata } from "next";
 import Script from "next/script";
-import CategoriesPage from "@/components/pages/public/CategoriesPage";
 
-// Static Metadata for Categories Listing Page
+// Static Metadata for Posts Listing Page
 export const metadata: Metadata = {
-  title: `Browse All Categories | ${SITE_DEFAULTS.title || SITE_NAME}`,
+  title: `Browse All Posts | ${SITE_DEFAULTS.title || SITE_NAME}`,
   description:
-    "Explore all learning categories on our platform. Find lessons and articles organized by topic to advance your skills and knowledge.",
+    "Explore all blog posts, tutorials, and articles on our platform. Find the latest lessons and in-depth articles to advance your skills and knowledge.",
   keywords: [
-    "learning categories",
-    "course categories",
-    "online learning",
-    "educational topics",
+    "blog posts",
+    "articles",
+    "tutorials",
+    "learning posts",
+    "online articles",
     "skill development",
-    "e-learning categories",
     SITE_DEFAULTS.title || SITE_NAME,
   ],
   alternates: {
-    canonical: `${SITE_DEFAULTS.url}/categories`,
+    canonical: `${SITE_DEFAULTS.url}/posts`,
     languages: {
-      "en-US": `${SITE_DEFAULTS.url}/categories`,
+      "en-US": `${SITE_DEFAULTS.url}/posts`,
     },
   },
   robots: {
@@ -35,17 +35,17 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: `Browse All Categories | ${SITE_DEFAULTS.title || SITE_NAME}`,
+    title: `Browse All Posts | ${SITE_DEFAULTS.title || SITE_NAME}`,
     description:
-      "Explore all learning categories. Discover lessons and articles organized by topic.",
-    url: `${SITE_DEFAULTS.url}/categories`,
+      "Browse our latest blog posts, tutorials, and articles organized by topic.",
+    url: `${SITE_DEFAULTS.url}/posts`,
     siteName: SITE_DEFAULTS.title || SITE_NAME,
     images: [
       {
-        url: SITE_DEFAULTS.logo || `${SITE_DEFAULTS.url}/og-categories.jpg`,
+        url: SITE_DEFAULTS.logo || `${SITE_DEFAULTS.url}/og-posts.jpg`,
         width: 1200,
         height: 630,
-        alt: "Browse Categories",
+        alt: "Browse Posts",
       },
     ],
     type: "website",
@@ -53,33 +53,31 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `Browse All Categories | ${SITE_DEFAULTS.title || SITE_NAME}`,
-    description: "Explore all learning categories and discover new lessons.",
-    images: [
-      SITE_DEFAULTS.logo || `${SITE_DEFAULTS.url}/twitter-categories.jpg`,
-    ],
+    title: `Browse All Posts | ${SITE_DEFAULTS.title || SITE_NAME}`,
+    description: "Explore our latest posts and articles.",
+    images: [SITE_DEFAULTS.logo || `${SITE_DEFAULTS.url}/twitter-posts.jpg`],
     site: SITE_DEFAULTS.XTwitterHandle,
     creator: SITE_DEFAULTS.XTwitterHandle,
   },
   metadataBase: new URL(SITE_DEFAULTS.url || ""),
 };
 
-export default function CategoriesListingPage() {
+export default function PostsListingPage() {
   const baseUrl = SITE_DEFAULTS.url || "";
 
   return (
     <>
-      {/* Inject JSON-LD for Categories Page */}
+      {/* Inject JSON-LD for Posts Listing Page */}
       <Script
-        id="categories-page-jsonld"
+        id="posts-page-jsonld"
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "CollectionPage",
-            name: "Learning Categories",
-            description: "Browse all learning categories on our platform",
-            url: `${baseUrl}/categories`,
+            "@type": "Blog",
+            name: "Posts",
+            description: "Browse all blog posts and articles on our platform",
+            url: `${baseUrl}/posts`,
             isPartOf: {
               "@type": "WebSite",
               name: SITE_DEFAULTS.title || SITE_NAME,
@@ -100,7 +98,7 @@ export default function CategoriesListingPage() {
 
       {/* Breadcrumb JSON-LD */}
       <Script
-        id="breadcrumb-jsonld"
+        id="breadcrumb-posts-jsonld"
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
@@ -116,8 +114,8 @@ export default function CategoriesListingPage() {
               {
                 "@type": "ListItem",
                 position: 2,
-                name: "Categories",
-                item: `${baseUrl}/categories`,
+                name: "Posts",
+                item: `${baseUrl}/posts`,
               },
             ],
           }),
@@ -127,7 +125,7 @@ export default function CategoriesListingPage() {
 
       {/* Organization JSON-LD */}
       <Script
-        id="organization-jsonld"
+        id="organization-jsonld-posts"
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
@@ -149,7 +147,7 @@ export default function CategoriesListingPage() {
 
       {/* Website JSON-LD */}
       <Script
-        id="website-jsonld"
+        id="website-jsonld-posts"
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
@@ -167,7 +165,7 @@ export default function CategoriesListingPage() {
         strategy="beforeInteractive"
       />
 
-      <CategoriesPage />
+      <LatestPostsPage />
     </>
   );
 }

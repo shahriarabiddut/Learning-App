@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { formatDate } from "@/lib/helper/clientHelperfunc";
 import {
   useBulkDeleteCommentsMutation,
   useBulkUpdateCommentsMutation,
@@ -100,17 +101,6 @@ export const CommentsManagement = ({
 
     return filtered;
   }, [comments, filterStatus, searchQuery]);
-
-  // Format date
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   // Handle single comment approval/rejection
   const handleUpdateStatus = async (commentId: string, approved: boolean) => {
@@ -467,7 +457,7 @@ export const CommentsManagement = ({
                             </Badge>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {formatDate(comment.createdAt)}
+                            {formatDate(comment.createdAt, false)}
                           </div>
                         </div>
 

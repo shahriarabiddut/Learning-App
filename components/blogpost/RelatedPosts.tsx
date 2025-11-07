@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatDate } from "@/lib/helper/clientHelperfunc";
 import { Clock, Eye, User, Calendar, ArrowRight, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,19 +24,6 @@ interface RelatedPost {
 
 interface RelatedPostsProps {
   posts: RelatedPost[];
-}
-
-function formatDate(date: string | undefined): string {
-  if (!date) return "";
-  try {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
 }
 
 export function RelatedPosts({ posts }: RelatedPostsProps) {
@@ -126,7 +114,8 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         {formatDate(
-                          relatedPost.publishedAt || relatedPost.createdAt
+                          relatedPost.publishedAt || relatedPost.createdAt,
+                          true
                         )}
                       </p>
                     </div>

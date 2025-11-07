@@ -78,3 +78,14 @@ export const extractErrorMessage = (
     return defaultMessage;
   }
 };
+
+export function getCategoryName(categories?: Array<{ name: string }>): string {
+  if (!categories || categories.length === 0) return "Uncategorized";
+  const names =
+    categories.length > 0
+      ? `${categories[0]?.name}  ${
+          categories.length > 1 && ` , ${categories[1]?.name}`
+        }`
+      : "Uncategorized";
+  return names;
+}

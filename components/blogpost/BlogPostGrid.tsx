@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatDate } from "@/lib/helper/clientHelperfunc";
 import { IBlogPost } from "@/models/blogPost.model";
 import { Calendar, Clock, Eye, MessageSquare, User } from "lucide-react";
 import Image from "next/image";
@@ -73,7 +74,7 @@ export const BlogPostGrid = ({
 
       const range = blogposts
         .slice(start, end + 1)
-        .map((blogpost) => blogpost.id)
+        .map((blogpost) => blogpost?.id)
         .filter((id): id is string => !!id);
 
       setSelectedBlogPosts((prev) => {
@@ -108,16 +109,6 @@ export const BlogPostGrid = ({
   // Handle Featured Click
   const handleFeaturedClick = (targetStatus: boolean) => {
     handleFeaturedStatusToggle(selectedBlogPosts, targetStatus);
-  };
-
-  // Format date
-  const formatDate = (date: string | Date | undefined) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
   };
 
   // Get status badge variant
@@ -210,11 +201,11 @@ export const BlogPostGrid = ({
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {blogposts.map((blogpost, index) => {
-          const statusInfo = getStatusBadge(blogpost.status || "draft");
+          const statusInfo = getStatusBadge(blogpost?.status || "draft");
 
           return (
             <Card
-              key={blogpost.id}
+              key={blogpost?.id}
               className="overflow-hidden flex flex-col relative bg-card text-card-foreground hover:shadow-lg transition-shadow duration-200"
             >
               {/* Checkbox */}
@@ -244,17 +235,17 @@ export const BlogPostGrid = ({
                 className="relative w-full h-48 bg-muted cursor-pointer group"
                 onClick={() => handleViewClick(blogpost)}
               >
-                {blogpost.featuredImage ? (
+                {blogpost?.featuredImage ? (
                   <Image
-                    src={blogpost.featuredImage}
-                    alt={blogpost.title}
+                    src={blogpost?.featuredImage}
+                    alt={blogpost?.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-200"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
                     <span className="text-6xl font-bold text-purple-300 dark:text-purple-700">
-                      {blogpost.title.charAt(0).toUpperCase()}
+                      {blogpost?.title.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
@@ -265,13 +256,13 @@ export const BlogPostGrid = ({
                 {/* Status and Category */}
                 <div className="flex items-center gap-2 mb-3 capitalize">
                   <Badge className={statusInfo.className}>
-                    {blogpost.status}
+                    {blogpost?.status}
                   </Badge>
-                  {blogpost.categories && blogpost.categories.length > 0 && (
+                  {blogpost?.categories && blogpost?.categories.length > 0 && (
                     <Badge variant="outline" className="text-xs capitalize">
-                      {typeof blogpost.categories[0] === "string"
-                        ? blogpost.categories[0]
-                        : blogpost.categories[0]?.name || "Uncategorized"}
+                      {typeof blogpost?.categories[0] === "string"
+                        ? blogpost?.categories[0]
+                        : blogpost?.categories[0]?.name || "Uncategorized"}
                     </Badge>
                   )}
                 </div>
@@ -281,34 +272,39 @@ export const BlogPostGrid = ({
                   className="text-lg font-bold text-foreground mb-2 line-clamp-2 cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                   onClick={() => handleViewClick(blogpost)}
                 >
-                  {blogpost.title}
+                  {blogpost?.title}
                 </h3>
 
                 {/* Excerpt */}
-                {blogpost.excerpt && (
+                {blogpost?.excerpt && (
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
-                    {blogpost.excerpt}
+                    {blogpost?.excerpt}
                   </p>
                 )}
 
                 {/* Meta Information */}
                 <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mb-4">
-                  {blogpost.authorName && (
+                  {blogpost?.authorName && (
                     <div className="flex items-center gap-1">
                       <User className="w-3 h-3" />
-                      <span>{blogpost.authorName}</span>
+                      <span>{blogpost?.authorName}</span>
                     </div>
                   )}
-                  {blogpost.publishedAt && (
+                  {(blogpost?.publishedAt || blogpost?.createdAt) && (
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      <span>{formatDate(blogpost.publishedAt)}</span>
+                      <span>
+                        {formatDate(
+                          blogpost?.publishedAt || blogpost?.createdAt,
+                          true
+                        )}
+                      </span>
                     </div>
                   )}
-                  {blogpost.readingTime && (
+                  {blogpost?.readingTime && (
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      <span>{blogpost.readingTime} min read</span>
+                      <span>{blogpost?.readingTime} min read</span>
                     </div>
                   )}
                 </div>
@@ -317,18 +313,18 @@ export const BlogPostGrid = ({
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4 pb-4 border-b">
                   <div className="flex items-center gap-1">
                     <Eye className="w-3 h-3" />
-                    <span>{blogpost.views || 0} views</span>
+                    <span>{blogpost?.views || 0} views</span>
                   </div>
-                  {blogpost.allowComments && (
+                  {blogpost?.allowComments && (
                     <div className="flex items-center gap-1">
                       <MessageSquare className="w-3 h-3" />
-                      <span>{blogpost.comments?.length || 0} comments</span>
+                      <span>{blogpost?.comments?.length || 0} comments</span>
                     </div>
                   )}
-                  {blogpost.tags && blogpost.tags.length > 0 && (
+                  {blogpost?.tags && blogpost?.tags.length > 0 && (
                     <div className="flex items-center gap-1">
                       <span className="font-medium">
-                        {blogpost.tags.length} tags
+                        {blogpost?.tags.length} tags
                       </span>
                     </div>
                   )}
@@ -339,13 +335,13 @@ export const BlogPostGrid = ({
                   blogpost={blogpost}
                   onEdit={() => handleEditClick(blogpost)}
                   onView={() => handleViewClick(blogpost)}
-                  onDelete={() => handleDeleteClick(blogpost.id)}
+                  onDelete={() => handleDeleteClick(blogpost?.id)}
                   onDuplicate={() => handleDuplicateClick(blogpost)}
                   showtoggleButtons={true}
                   onToggleStatus={() =>
                     handleToggleStatusClick(
-                      blogpost.id,
-                      blogpost.isActive || false
+                      blogpost?.id,
+                      blogpost?.isActive || false
                     )
                   }
                 />

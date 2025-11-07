@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Mail, CheckCircle, Sparkles, Send } from "lucide-react";
+import { CheckCircle, Mail, Send, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 export default function NewsletterSection() {
@@ -70,7 +70,7 @@ export default function NewsletterSection() {
           </h2>
 
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Subscribe to our newsletter and get the latest courses, tutorials,
+            Subscribe to our newsletter and get the latest lessons, tutorials,
             and educational content delivered straight to your inbox
           </p>
         </motion.div>

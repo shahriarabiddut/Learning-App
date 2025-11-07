@@ -5,6 +5,7 @@ export interface FetchParams {
   sortBy?: string;
   current?: string;
   daysOfWeek?: string;
+  featured?: string;
 }
 
 export interface PaginatedParams<T = unknown> {
