@@ -2,15 +2,27 @@
 
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, BookOpen, GraduationCap, Trophy, Users, FileText, FolderOpen, Loader2 } from "lucide-react";
+import {
+  Search,
+  BookOpen,
+  GraduationCap,
+  Trophy,
+  Users,
+  FileText,
+  FolderOpen,
+  Loader2,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useFetchPublicBlogPostsQuery, useFetchPostCategoriesQuery } from "@/lib/redux-features/blogPost/blogPostApi";
+import {
+  useFetchPublicBlogPostsQuery,
+  useFetchPostCategoriesQuery,
+} from "@/lib/redux-features/blogPost/blogPostApi";
 
-// Search configuration 
+// Search configuration
 const SEARCH_CONFIG = {
   searchBlogPosts: true,
   searchCategories: true,
-  searchlessons: false, 
+  searchlessons: false,
 };
 
 interface StatCardProps {
@@ -58,24 +70,30 @@ export default function Hero() {
   const shouldSearch = debouncedQuery.length >= 2;
 
   // Fetch blog posts (only if enabled and query exists)
-  const { data: blogPosts, isLoading: loadingPosts } = useFetchPublicBlogPostsQuery(
-    { search: debouncedQuery, limit: 5 },
-    { skip: !SEARCH_CONFIG.searchBlogPosts || !shouldSearch }
-  );
+  const { data: blogPosts, isLoading: loadingPosts } =
+    useFetchPublicBlogPostsQuery(
+      { search: debouncedQuery, limit: 5 },
+      { skip: !SEARCH_CONFIG.searchBlogPosts || !shouldSearch }
+    );
 
   // Fetch categories (only if enabled and query exists)
-  const { data: categories, isLoading: loadingCategories } = useFetchPostCategoriesQuery(
-    { search: debouncedQuery, limit: 5 },
-    { skip: !SEARCH_CONFIG.searchCategories || !shouldSearch }
-  );
+  const { data: categories, isLoading: loadingCategories } =
+    useFetchPostCategoriesQuery(
+      { search: debouncedQuery, limit: 5 },
+      { skip: !SEARCH_CONFIG.searchCategories || !shouldSearch }
+    );
 
   const isLoading = loadingPosts || loadingCategories;
-  const hasResults = (blogPosts?.data?.length ?? 0) > 0 || (categories?.data?.length ?? 0) > 0;
+  const hasResults =
+    (blogPosts?.data?.length ?? 0) > 0 || (categories?.data?.length ?? 0) > 0;
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
         setShowResults(false);
       }
     };
@@ -132,7 +150,10 @@ export default function Hero() {
 
             {/* Search bar */}
             <div className="mb-8">
-              <div ref={searchRef} className="relative max-w-2xl mx-auto lg:mx-0">
+              <div
+                ref={searchRef}
+                className="relative max-w-2xl mx-auto lg:mx-0"
+              >
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 z-10" />
                 <input
                   type="text"
@@ -166,68 +187,88 @@ export default function Hero() {
                       {isLoading ? (
                         <div className="flex items-center justify-center py-8">
                           <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                          <span className="ml-2 text-slate-600 dark:text-slate-400">Searching...</span>
+                          <span className="ml-2 text-slate-600 dark:text-slate-400">
+                            Searching...
+                          </span>
                         </div>
                       ) : hasResults ? (
                         <div className="p-4">
                           {/* Blog Posts Results */}
-                          {SEARCH_CONFIG.searchBlogPosts && blogPosts?.data && blogPosts.data.length > 0 && (
-                            <div className="mb-4">
-                              <div className="flex items-center gap-2 mb-2 px-2">
-                                <FileText className="w-4 h-4 text-emerald-600" />
-                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Articles</h3>
+                          {SEARCH_CONFIG.searchBlogPosts &&
+                            blogPosts?.data &&
+                            blogPosts.data.length > 0 && (
+                              <div className="mb-4">
+                                <div className="flex items-center gap-2 mb-2 px-2">
+                                  <FileText className="w-4 h-4 text-emerald-600" />
+                                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    Articles
+                                  </h3>
+                                </div>
+                                <div className="space-y-1">
+                                  {blogPosts.data.slice(0, 5).map((post) => (
+                                    <button
+                                      key={post.id}
+                                      onClick={() => {
+                                        console.log(
+                                          "Navigate to post:",
+                                          post.id
+                                        );
+                                        setShowResults(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+                                    >
+                                      <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-1">
+                                        {post.title}
+                                      </p>
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                              <div className="space-y-1">
-                                {blogPosts.data.slice(0, 5).map((post) => (
-                                  <button
-                                    key={post.id}
-                                    onClick={() => {
-                                      console.log("Navigate to post:", post.id);
-                                      setShowResults(false);
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
-                                  >
-                                    <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-1">
-                                      {post.title}
-                                    </p>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                            )}
 
                           {/* Categories Results */}
-                          {SEARCH_CONFIG.searchCategories && categories?.data && categories.data.length > 0 && (
-                            <div className="mb-4">
-                              <div className="flex items-center gap-2 mb-2 px-2">
-                                <FolderOpen className="w-4 h-4 text-teal-600" />
-                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Categories</h3>
+                          {SEARCH_CONFIG.searchCategories &&
+                            categories?.data &&
+                            categories.data.length > 0 && (
+                              <div className="mb-4">
+                                <div className="flex items-center gap-2 mb-2 px-2">
+                                  <FolderOpen className="w-4 h-4 text-teal-600" />
+                                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    Categories
+                                  </h3>
+                                </div>
+                                <div className="space-y-1">
+                                  {categories.data
+                                    .slice(0, 5)
+                                    .map((category) => (
+                                      <button
+                                        key={category.id}
+                                        onClick={() => {
+                                          console.log(
+                                            "Navigate to category:",
+                                            category.id
+                                          );
+                                          setShowResults(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950 transition-colors"
+                                      >
+                                        <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-1">
+                                          {category.name}
+                                        </p>
+                                      </button>
+                                    ))}
+                                </div>
                               </div>
-                              <div className="space-y-1">
-                                {categories.data.slice(0, 5).map((category) => (
-                                  <button
-                                    key={category.id}
-                                    onClick={() => {
-                                      console.log("Navigate to category:", category.id);
-                                      setShowResults(false);
-                                    }}
-                                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950 transition-colors"
-                                  >
-                                    <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-1">
-                                      {category.name}
-                                    </p>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                            )}
 
                           {/* lessons Results - Placeholder */}
                           {SEARCH_CONFIG.searchlessons && (
                             <div>
                               <div className="flex items-center gap-2 mb-2 px-2">
                                 <BookOpen className="w-4 h-4 text-cyan-600" />
-                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">lessons</h3>
+                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                  lessons
+                                </h3>
                               </div>
                               <div className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400 italic">
                                 Course search coming soon...
@@ -237,7 +278,9 @@ export default function Hero() {
                         </div>
                       ) : (
                         <div className="py-8 text-center">
-                          <p className="text-slate-600 dark:text-slate-400">No results found for "{debouncedQuery}"</p>
+                          <p className="text-slate-600 dark:text-slate-400">
+                            No results found for "{debouncedQuery}"
+                          </p>
                         </div>
                       )}
                     </motion.div>
@@ -322,3 +365,4 @@ export default function Hero() {
       </div>
     </section>
   );
+}
