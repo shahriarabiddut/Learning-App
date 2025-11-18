@@ -323,6 +323,7 @@ export function BlogPostForm({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
+          <DialogTitle></DialogTitle>
           <SharedLoader />
         </DialogContent>
       </Dialog>
@@ -333,8 +334,9 @@ export function BlogPostForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] lg:w-[90vw] xl:w-[85vw] min-w-[80vw] max-w-7xl max-h-[95vh] overflow-auto p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+      <DialogContent className="w-[95vw] sm:w-[90vw] lg:w-[95vw] min-w-[90vw] max-w-7xl max-h-[95vh] overflow-auto p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
         {/* Header */}
+        <DialogTitle></DialogTitle>
         <div className="sticky top-0 z-10 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 px-6 py-5">
           <DialogHeader className="space-y-2 relative">
             <div

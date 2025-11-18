@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { uploadImageInIMGBB } from "@/lib/helper/serverHelperFunc";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-// import { FileInputUpload } from "./FileInputUpload";
 
 interface ImageInputProps {
   value: string;
