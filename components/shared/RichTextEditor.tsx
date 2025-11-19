@@ -1,34 +1,33 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { getRichTextStyles } from "@/lib/design/richTextStyles";
+import { uploadImageInIMGBB } from "@/lib/helper/serverHelperFunc";
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
+  Check,
+  Columns,
+  Highlighter,
+  Image as ImageIcon,
   Italic,
-  Underline,
+  Link,
+  Link as LinkIcon,
   List,
   ListOrdered,
-  Link,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  Image as ImageIcon,
-  Code,
-  Quote,
-  Undo,
-  Redo,
-  X,
-  Upload,
-  Link as LinkIcon,
-  Table,
-  Columns,
   Minus,
   Plus,
-  Check,
+  Redo,
   Strikethrough,
-  Highlighter,
+  Table,
   Type,
+  Underline,
+  Undo,
+  Upload,
+  X,
 } from "lucide-react";
-import { uploadImageInIMGBB } from "@/lib/helper/serverHelperFunc";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface RichTextEditorProProps {
@@ -76,6 +75,12 @@ export const RichTextEditor = ({
   );
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+
+  // New states for tracking current format
+  const [currentFormat, setCurrentFormat] = useState("p");
+  const [currentFontSize, setCurrentFontSize] = useState("3");
+  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
+
   const editorRef = useRef<HTMLDivElement>(null);
   const linkModalRef = useRef<HTMLDivElement>(null);
   const imageModalRef = useRef<HTMLDivElement>(null);
@@ -99,9 +104,106 @@ export const RichTextEditor = ({
     }
   }, [value]);
 
+  // Update current format and font size based on selection
+  const updateFormatState = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    let node: Node | null = range.startContainer;
+
+    // If text node, get parent element
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentElement;
+    }
+
+    if (!node || !(node instanceof HTMLElement)) return;
+
+    // Check if we're inside the editor
+    if (!editorRef.current?.contains(node)) return;
+
+    // Get block-level element (h1, h2, h3, p, blockquote, pre)
+    let blockElement = node as HTMLElement;
+    while (blockElement && blockElement !== editorRef.current) {
+      const tagName = blockElement.tagName.toLowerCase();
+      if (["h1", "h2", "h3", "p", "blockquote", "pre"].includes(tagName)) {
+        setCurrentFormat(tagName);
+        break;
+      }
+      blockElement = blockElement.parentElement as HTMLElement;
+    }
+
+    // Get font size
+    let fontSizeElement = node as HTMLElement;
+    while (fontSizeElement && fontSizeElement !== editorRef.current) {
+      const size = fontSizeElement.getAttribute("size");
+      if (size) {
+        setCurrentFontSize(size);
+        break;
+      }
+      // Check inline style
+      const style = window.getComputedStyle(fontSizeElement);
+      const fontSize = style.fontSize;
+      if (fontSize) {
+        // Map pixel sizes to font size values
+        const sizeMap: { [key: string]: string } = {
+          "10px": "1",
+          "13px": "2",
+          "16px": "3",
+          "18px": "4",
+          "24px": "5",
+          "32px": "6",
+          "48px": "7",
+        };
+        const mappedSize = sizeMap[fontSize];
+        if (mappedSize) {
+          setCurrentFontSize(mappedSize);
+          break;
+        }
+      }
+      fontSizeElement = fontSizeElement.parentElement as HTMLElement;
+    }
+
+    // Check active formats (bold, italic, underline, etc.)
+    const formats = new Set<string>();
+
+    if (document.queryCommandState("bold")) formats.add("bold");
+    if (document.queryCommandState("italic")) formats.add("italic");
+    if (document.queryCommandState("underline")) formats.add("underline");
+    if (document.queryCommandState("strikeThrough"))
+      formats.add("strikeThrough");
+    if (document.queryCommandState("insertUnorderedList"))
+      formats.add("insertUnorderedList");
+    if (document.queryCommandState("insertOrderedList"))
+      formats.add("insertOrderedList");
+    if (document.queryCommandState("justifyLeft")) formats.add("justifyLeft");
+    if (document.queryCommandState("justifyCenter"))
+      formats.add("justifyCenter");
+    if (document.queryCommandState("justifyRight")) formats.add("justifyRight");
+    if (document.queryCommandState("justifyFull")) formats.add("justifyFull");
+
+    setActiveFormats(formats);
+  }, []);
+
+  // Update format state on selection change
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (document.activeElement === editorRef.current) {
+        updateFormatState();
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", handleSelectionChange);
+  }, [updateFormatState]);
+
   const handleContentChange = useCallback(() => {
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
-  }, [onChange]);
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+      updateFormatState();
+    }
+  }, [onChange, updateFormatState]);
 
   const saveSelection = () => {
     const sel = window.getSelection();
@@ -120,7 +222,10 @@ export const RichTextEditor = ({
   const execCommand = (cmd: string, val?: string) => {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
-    setTimeout(handleContentChange, 10);
+    setTimeout(() => {
+      handleContentChange();
+      updateFormatState();
+    }, 10);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -196,7 +301,10 @@ export const RichTextEditor = ({
     } else {
       document.execCommand("insertHTML", false, text.replace(/\n/g, "<br>"));
     }
-    setTimeout(handleContentChange, 10);
+    setTimeout(() => {
+      handleContentChange();
+      updateFormatState();
+    }, 10);
   };
 
   useEffect(() => {
@@ -503,13 +611,13 @@ export const RichTextEditor = ({
   ];
 
   return (
-    <div className={`rich-text-editor-pro  ${className}`}>
+    <div className={`rich-text-editor-pro ${className}`}>
       <div className="relative border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-900">
         <div className="flex flex-wrap items-center gap-1 p-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850">
           <select
             className="px-3 py-2 text-sm font-medium border-2 rounded-lg mr-2 bg-white dark:bg-gray-800"
             onChange={(e) => execCommand("formatBlock", `<${e.target.value}>`)}
-            defaultValue="p"
+            value={currentFormat}
           >
             <option value="p">Paragraph</option>
             <option value="h1">Heading 1</option>
@@ -521,7 +629,7 @@ export const RichTextEditor = ({
           <select
             className="px-3 py-2 text-sm font-medium border-2 rounded-lg mr-2 bg-white dark:bg-gray-800"
             onChange={(e) => execCommand("fontSize", e.target.value)}
-            defaultValue="3"
+            value={currentFontSize}
           >
             <option value="1">10px</option>
             <option value="2">13px</option>
@@ -542,7 +650,7 @@ export const RichTextEditor = ({
               <Button
                 key={b.c}
                 type="button"
-                variant="ghost"
+                variant={activeFormats.has(b.c!) ? "default" : "ghost"}
                 size="sm"
                 onClick={() => execCommand(b.c!)}
                 title={b.t}
@@ -677,14 +785,19 @@ export const RichTextEditor = ({
         <div
           ref={editorRef}
           contentEditable
-          className={`p-8 outline-none overflow-y-auto text-gray-900 dark:text-gray-100 ${
+          className={`rich-text-content p-8 outline-none overflow-y-auto text-gray-900 dark:text-gray-100 ${
             isFocused ? "ring-2 ring-blue-500 ring-opacity-30" : ""
           }`}
           style={{ minHeight }}
-          onFocus={() => setIsFocused(true)}
+          onFocus={() => {
+            setIsFocused(true);
+            updateFormatState();
+          }}
           onBlur={() => setIsFocused(false)}
           onInput={handleContentChange}
           onKeyDown={handleKeyDown}
+          onKeyUp={updateFormatState}
+          onClick={updateFormatState}
           onPaste={handlePaste}
           onDoubleClick={handleDoubleClick}
           data-placeholder={placeholder}
@@ -1219,11 +1332,7 @@ export const RichTextEditor = ({
         </>
       </div>
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `.rich-text-editor-pro [contenteditable]:empty:before{content:attr(data-placeholder);color:#9ca3af;pointer-events:none;font-style:italic}.rich-text-editor-pro [contenteditable]{line-height:1.8;font-size:16px}.rich-text-editor-pro [contenteditable] h1{font-size:2em;font-weight:700;margin:.67em 0}.rich-text-editor-pro [contenteditable] h2{font-size:1.5em;font-weight:600;margin:.75em 0}.rich-text-editor-pro [contenteditable] h3{font-size:1.25em;font-weight:600;margin:.83em 0}.rich-text-editor-pro [contenteditable] p{margin:.75em 0}.rich-text-editor-pro [contenteditable] blockquote{margin:1em 0;padding:.5em 1em;border-left:4px solid #3b82f6;background:rgba(59,130,246,.05);font-style:italic}.rich-text-editor-pro [contenteditable] pre{margin:1em 0;padding:1em;background:#1e293b;color:#e2e8f0;border-radius:8px;overflow-x:auto;font-family:monospace}.rich-text-editor-pro [contenteditable] ul,.rich-text-editor-pro [contenteditable] ol{margin:.75em 0;padding-left:2em}.rich-text-editor-pro [contenteditable] a{color:#3b82f6;text-decoration:underline}.rich-text-editor-pro [contenteditable] img{cursor:pointer;transition:transform .2s}.rich-text-editor-pro [contenteditable] img:hover{transform:scale(1.02)}.rich-text-editor-pro [contenteditable] table{border-collapse:collapse}.rich-text-editor-pro [contenteditable] table th,.rich-text-editor-pro [contenteditable] table td{border:1px solid #ddd;padding:12px}`,
-        }}
-      />
+      <style dangerouslySetInnerHTML={{ __html: getRichTextStyles() }} />
     </div>
   );
 };

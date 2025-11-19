@@ -343,7 +343,7 @@ export const blogPostApi = createApi({
         if (params.limit) searchParams.set("limit", String(params.limit));
         if (params.category) searchParams.set("category", params.category);
         if (params.timeRange) searchParams.set("timeRange", params.timeRange);
-        return `/trending?${searchParams.toString()}`;
+        return `/public/trending?${searchParams.toString()}`;
       },
       providesTags: (result) =>
         result
@@ -377,7 +377,7 @@ export const blogPostApi = createApi({
         const searchParams = new URLSearchParams();
         if (params.limit) searchParams.set("limit", String(params.limit));
         if (params.sortBy) searchParams.set("sortBy", params.sortBy);
-        return `/authors/top?${searchParams.toString()}`;
+        return `/public/authors/top?${searchParams.toString()}`;
       },
       providesTags: [{ type: "BlogPosts", id: "TOP_AUTHORS" }],
       transformResponse: (response: any): ITopAuthor[] => {
@@ -407,7 +407,7 @@ export const blogPostApi = createApi({
         if (params.sortBy) searchParams.set("sortBy", params.sortBy);
         if (params.current) searchParams.set("current", params.current);
         if (params.featured) searchParams.set("featured", params.featured);
-        return `/category?${searchParams.toString()}`;
+        return `/public/category?${searchParams.toString()}`;
       },
       providesTags: (result, error) => {
         if (error) return [{ type: "Categories", id: "LIST" }];
@@ -558,7 +558,7 @@ export const blogPostApi = createApi({
     }),
 
     getBlogPostBySlug: build.query<IBlogPost, string>({
-      query: (slug) => `/slug/${slug}`,
+      query: (slug) => `/public/slug/${slug}`,
       providesTags: (result) =>
         result
           ? [
@@ -1196,7 +1196,7 @@ export const blogPostApi = createApi({
         const searchParams = new URLSearchParams();
         if (params.limit) searchParams.set("limit", String(params.limit));
         if (params.category) searchParams.set("category", params.category);
-        return `/featured?${searchParams.toString()}`;
+        return `/public/featured?${searchParams.toString()}`;
       },
       providesTags: (result) =>
         result
@@ -1235,7 +1235,7 @@ export const blogPostApi = createApi({
         const searchParams = new URLSearchParams();
         searchParams.set("page", String(page));
         searchParams.set("limit", String(limit));
-        return `/category/${categoryId}?${searchParams.toString()}`;
+        return `/public/category/${categoryId}?${searchParams.toString()}`;
       },
       providesTags: (result, error, { categoryId }) => {
         if (error) return [{ type: "BlogPosts", id: `CATEGORY-${categoryId}` }];
