@@ -43,14 +43,13 @@ export const blogPostSchema = z.object({
   contentBlocks: z.array(contentBlockSchema).optional(),
   contentType: z.enum(["html", "markdown", "blocks"]).optional(),
 
-  // author: z.string().min(1, "Author is required"),
-  // authorName: z.string().optional(),
-
-  categories: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
+  categories: z.array(z.string()),
+  tags: z.array(z.string()),
 
   featuredImage: z.string().url().optional().or(z.literal("")),
-  status: z.enum(["draft", "published", "archived"]).default("draft"),
+  status: z
+    .enum(["draft", "published", "revision", "pending"])
+    .default("draft"),
 
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),

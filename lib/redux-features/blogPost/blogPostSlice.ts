@@ -79,7 +79,9 @@ const getStoredUISettings = (): Partial<BlogPostState> => {
     }
 
     if (
-      ["all", "draft", "published", "archived"].includes(parsed.filterStatus)
+      ["all", "draft", "published", "revision", "pending"].includes(
+        parsed.filterStatus
+      )
     ) {
       validated.filterStatus = parsed.filterStatus;
     }

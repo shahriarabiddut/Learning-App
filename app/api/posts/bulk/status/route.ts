@@ -33,10 +33,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (!["draft", "published", "archived"].includes(status)) {
+    if (!["draft", "published", "revision", "pending"].includes(status)) {
       return NextResponse.json(
         {
-          error: "Invalid status. Must be 'draft', 'published', or 'archived'",
+          error: "Invalid status.",
         },
         { status: 400 }
       );

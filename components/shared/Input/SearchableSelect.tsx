@@ -70,7 +70,7 @@ export default function SearchableSelect({
       case "md":
       default:
         return {
-          triggerHeight: "min-h-10 p-2",
+          triggerHeight: "min-h-10 sm:h-12 p-2",
           fontSize: "text-sm",
           inputHeight: "",
           dropdownWidth: "w-full",

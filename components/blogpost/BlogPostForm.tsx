@@ -16,13 +16,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -34,12 +27,25 @@ import { useFetchCategoriesQuery } from "@/lib/redux-features/categories/categor
 import { IBlogPost } from "@/models/blogPost.model";
 import { blogPostSchema } from "@/schemas/blogPostSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X, Eye, EyeOff } from "lucide-react";
+import {
+  X,
+  Eye,
+  EyeOff,
+  Info,
+  FileText,
+  Image as ImageIcon,
+  Search,
+  Edit2,
+  Lock,
+  Plus,
+  Loader2,
+} from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { postStatus } from "@/lib/constants/env";
 
 interface BlogPostFormProps {
   postId?: string;
@@ -50,7 +56,6 @@ interface BlogPostFormProps {
 
 type BlogPostFormValues = z.infer<typeof blogPostSchema>;
 
-// SEO Settings visibility type
 type SeoVisibility = {
   seo: boolean;
   social: boolean;
@@ -62,6 +67,15 @@ const extractTextFromHtml = (html: string, maxLength: number = 160): string => {
   tmp.innerHTML = html;
   const text = tmp.textContent || tmp.innerText || "";
   return text.slice(0, maxLength).trim();
+};
+
+// Helper function to calculate reading time based on word count
+const calculateReadingTime = (html: string): number => {
+  const text = extractTextFromHtml(html, Infinity);
+  const words = text.split(/\s+/).filter(Boolean).length;
+  // Average reading speed: 200 words per minute
+  const minutes = Math.ceil(words / 200);
+  return Math.max(1, minutes); // Minimum 1 minute
 };
 
 // Load SEO settings from localStorage
@@ -95,7 +109,6 @@ export function BlogPostForm({
   const [addBlogPost] = useAddBlogPostMutation();
   const [updateBlogPost] = useUpdateBlogPostMutation();
 
-  // Fetch categories using RTK Query
   const {
     data: categoriesData,
     isLoading: categoriesLoading,
@@ -105,7 +118,6 @@ export function BlogPostForm({
     limit: 100,
   });
 
-  // Fetch post if editing
   const {
     data: post,
     isLoading: postLoading,
@@ -122,7 +134,9 @@ export function BlogPostForm({
   const [seoVisibility, setSeoVisibility] = useState<SeoVisibility>(
     loadSeoSettings()
   );
-  const [autoFillEnabled, setAutoFillEnabled] = useState(true);
+  const [isExcerptEditable, setIsExcerptEditable] = useState(false);
+  const [isSlugEditable, setIsSlugEditable] = useState(false);
+  const [userSetReadingTime, setUserSetReadingTime] = useState(false);
 
   const form = useForm<BlogPostFormValues>({
     resolver: zodResolver(blogPostSchema),
@@ -151,7 +165,6 @@ export function BlogPostForm({
     },
   });
 
-  // Get categories from RTK Query data
   const categories = useMemo(
     () => categoriesData?.data || [],
     [categoriesData]
@@ -165,10 +178,9 @@ export function BlogPostForm({
       .replace(/(^-|-$)/g, "");
   }, []);
 
-  // Reset form when dialog opens/closes or postId changes
+  // Reset form when dialog opens/closes
   useEffect(() => {
     if (!open) {
-      // Reset form when closing
       form.reset({
         title: "",
         slug: "",
@@ -195,7 +207,9 @@ export function BlogPostForm({
       setSelectedCategories([]);
       setReadingTime([5]);
       setTagInput("");
-      setAutoFillEnabled(true);
+      setIsExcerptEditable(false);
+      setIsSlugEditable(false);
+      setUserSetReadingTime(false);
     }
   }, [open, form]);
 
@@ -204,8 +218,9 @@ export function BlogPostForm({
     if (postFetched && post && open && postId) {
       const data = post as IBlogPost;
 
-      // Disable auto-fill when editing
-      setAutoFillEnabled(false);
+      setIsExcerptEditable(false);
+      setIsSlugEditable(false);
+      setUserSetReadingTime(true);
 
       form.reset({
         title: data.title,
@@ -316,6 +331,29 @@ export function BlogPostForm({
     });
   }, []);
 
+  // Auto-calculate reading time from content
+  const handleContentChange = useCallback(
+    (content: string) => {
+      form.setValue("content", content);
+
+      // Only auto-update if user hasn't manually set reading time
+      if (!userSetReadingTime && !postId) {
+        const calculatedTime = calculateReadingTime(content);
+        setReadingTime([calculatedTime]);
+        form.setValue("readingTime", calculatedTime);
+      }
+
+      // Auto-fill other fields for new posts
+      if (!postId) {
+        const extractedText = extractTextFromHtml(content, 160);
+        form.setValue("seo.description", extractedText);
+        form.setValue("seo.ogDescription", extractedText);
+        form.setValue("excerpt", extractedText);
+      }
+    },
+    [form, postId, userSetReadingTime]
+  );
+
   // Loading state
   const isLoading = categoriesLoading || (postId && postLoading);
 
@@ -335,191 +373,62 @@ export function BlogPostForm({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:w-[90vw] lg:w-[95vw] min-w-[90vw] max-w-7xl max-h-[95vh] overflow-auto p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-        {/* Header */}
-        <DialogTitle></DialogTitle>
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 px-6 py-5">
+        <DialogTitle className="p-0"></DialogTitle>
+        <div className="sticky top-0 -mt-4 z-10 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
           <DialogHeader className="space-y-2 relative">
             <div
-              className="absolute top-0 right-0 cursor-pointer"
+              className="absolute top-0 right-0 cursor-pointer hover:opacity-70 transition-opacity"
               onClick={() => onOpenChange(false)}
             >
               <X className="w-6 h-6" />
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-purple-500 dark:bg-purple-600 flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
+                <FileText className="w-4 h-4 text-white" />
               </div>
               <div>
                 <DialogTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {postId ? `Edit Blog Post` : "Create New Blog Post"}
+                  {postId ? `Editing Blog Post` : "Create New Blog Post"}
                 </DialogTitle>
-                {postId && post && (
-                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mt-1">
-                    {post.title}
-                  </p>
-                )}
               </div>
             </div>
           </DialogHeader>
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-2 bg-gray-50 dark:bg-gray-900 p-1"
+              className="space-y-2 bg-gray-50 dark:bg-gray-900 px-1"
             >
               {/* Basic Information Section */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
-                <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
-                  <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <svg
-                      className="w-3 h-3 text-blue-600 dark:text-blue-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Basic Information
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2 lg:col-span-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Post Title <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter post title"
-                            className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              console.log();
-                              if (!postId) {
-                                form.setValue(
-                                  "slug",
-                                  generateSlug(e.target.value)
-                                );
-                                form.setValue("seo.title", e.target.value);
-                                form.setValue("seo.ogTitle", e.target.value);
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  {/* Excerpt */}
-                  <div className="grid grid-rows-1 col-span-1 md:col-span-3 space-y-2">
-                    <FormField
-                      control={form.control}
-                      name="slug"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300"></FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="post-url-slug"
-                              className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="excerpt"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Excerpt
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Brief summary of your post..."
-                              className="min-h-[100px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
-                            This will be displayed in post previews and search
-                            results
-                          </FormDescription>
-                          <FormMessage className="text-red-500" />
-                        </FormItem>
-                      )}
-                    />
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center justify-start gap-2">
+                    <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Info className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      Basic Information
+                    </h3>
                   </div>
                   {/* Status Toggles */}
-                  <div className="grid grid-rows-1 gap-1 col-span-1">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
                       name="status"
                       render={({ field }) => (
                         <FormItem className="space-y-1">
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                              <SelectItem
-                                value="draft"
-                                className="focus:bg-gray-100 dark:focus:bg-gray-700"
-                              >
-                                Draft
-                              </SelectItem>
-                              <SelectItem
-                                value="published"
-                                className="focus:bg-gray-100 dark:focus:bg-gray-700"
-                              >
-                                Published
-                              </SelectItem>
-                              <SelectItem
-                                value="archived"
-                                className="focus:bg-gray-100 dark:focus:bg-gray-700"
-                              >
-                                Archived
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-red-500" />
+                          <FormControl>
+                            <SearchableSelect
+                              value={field.value || ""}
+                              onValueChange={field.onChange}
+                              placeholder="Select Status"
+                              options={postStatus}
+                              className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                         </FormItem>
                       )}
                     />
@@ -542,6 +451,7 @@ export function BlogPostForm({
                               </FormLabel>
                             </div>
                           </div>
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                         </FormItem>
                       )}
                     />
@@ -564,6 +474,7 @@ export function BlogPostForm({
                               </FormLabel>
                             </div>
                           </div>
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                         </FormItem>
                       )}
                     />
@@ -587,89 +498,71 @@ export function BlogPostForm({
                               </FormLabel>
                             </div>
                           </div>
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                         </FormItem>
                       )}
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Content Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
-                <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
-                  <div className="w-6 h-6 rounded-md bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                    <svg
-                      className="w-3 h-3 text-indigo-600 dark:text-indigo-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Post Content
-                  </h3>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormControl>
-                        <div className="h-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-                          <RichTextEditor
-                            value={field.value || ""}
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2 lg:col-span-2">
+                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Post Title <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter post title"
+                            className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                            {...field}
                             onChange={(e) => {
                               field.onChange(e);
-                              console.log();
                               if (!postId) {
                                 form.setValue(
-                                  "seo.description",
-                                  extractTextFromHtml(e, 160)
+                                  "slug",
+                                  generateSlug(e.target.value)
                                 );
-                                form.setValue(
-                                  "seo.ogDescription",
-                                  extractTextFromHtml(e, 160)
-                                );
-                                form.setValue(
-                                  "excerpt",
-                                  extractTextFromHtml(e, 160)
-                                );
+                                form.setValue("seo.title", e.target.value);
+                                form.setValue("seo.ogTitle", e.target.value);
                               }
                             }}
                           />
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-red-500" />
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormControl>
+                          <div className="h-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <RichTextEditor
+                              value={field.value || ""}
+                              className="w-full"
+                              onChange={handleContentChange}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Media & Categories Section */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
                 <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
                   <div className="w-6 h-6 rounded-md bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <svg
-                      className="w-3 h-3 text-purple-600 dark:text-purple-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <ImageIcon className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     Media & Categories
@@ -677,33 +570,103 @@ export function BlogPostForm({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <FormField
-                    control={form.control}
-                    name="featuredImage"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Featured Image
-                        </FormLabel>
-                        <ImageInput
-                          value={field.value || ""}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            console.log(e);
-                            if (!postId) {
-                              form.setValue("seo.ogImage", e);
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="featuredImage"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Featured Image
+                          </FormLabel>
+                          <ImageInput
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (!postId) {
+                                form.setValue("seo.ogImage", e);
+                              }
+                            }}
+                            currentImageUrl={
+                              postId && post ? post.featuredImage : undefined
                             }
-                          }}
-                          currentImageUrl={
-                            postId && post ? post.featuredImage : undefined
-                          }
-                          showCurrentImage={!!postId && !!post}
-                          placeholder="https://example.com/image.jpg"
-                        />
-                        <FormMessage className="text-red-500" />
-                      </FormItem>
-                    )}
-                  />
+                            showCurrentImage={!!postId && !!post}
+                            placeholder="https://example.com/image.jpg"
+                          />
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                        </FormItem>
+                      )}
+                    />
+                    {/* Slug with toggle */}
+                    <FormField
+                      control={form.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Slug
+                            </FormLabel>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsSlugEditable(!isSlugEditable)}
+                              className="h-7 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              {isSlugEditable ? (
+                                <>
+                                  <Lock className="w-3 h-3 mr-1" />
+                                  Lock
+                                </>
+                              ) : (
+                                <>
+                                  <Edit2 className="w-3 h-3 mr-1" />
+                                  Edit
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <FormControl>
+                            <Input
+                              placeholder="post-url-slug"
+                              className="h-10 sm:h-12 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                              {...field}
+                              readOnly={!isSlugEditable}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                        </FormItem>
+                      )}
+                    />
+                    {/* Reading Time */}
+                    <FormField
+                      control={form.control}
+                      name="readingTime"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Reading Time (minutes): {readingTime[0]}
+                          </FormLabel>
+                          <FormControl>
+                            <Slider
+                              className="bg-purple-100 dark:bg-purple-900/20"
+                              min={1}
+                              max={60}
+                              step={1}
+                              value={readingTime}
+                              onValueChange={(value) => {
+                                setReadingTime(value);
+                                field.onChange(value[0]);
+                                setUserSetReadingTime(true);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <div className="space-y-4">
                     <FormField
@@ -735,7 +698,7 @@ export function BlogPostForm({
                               className="w-full h-auto bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 rounded-2xl"
                             />
                           </FormControl>
-                          <FormMessage className="text-red-500" />
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                         </FormItem>
                       )}
                     />
@@ -773,82 +736,99 @@ export function BlogPostForm({
                         })}
                       </div>
                     )}
-
+                    {/* Tags Section */}
+                    <div className="space-y-3">
+                      <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Tags
+                      </FormLabel>
+                      <div className="flex gap-2">
+                        <Input
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addTag();
+                            }
+                          }}
+                          placeholder="Add a tag..."
+                          className="flex-1 h-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                        />
+                        <Button
+                          type="button"
+                          onClick={addTag}
+                          variant="outline"
+                          className="h-10 px-4"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {form.watch("tags")?.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {form.watch("tags")?.map((tag) => (
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                            >
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() => removeTag(tag)}
+                                className="ml-2 hover:text-blue-900 dark:hover:text-blue-100"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Excerpt with toggle */}
                     <FormField
                       control={form.control}
-                      name="readingTime"
+                      name="excerpt"
                       render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Reading Time (minutes): {readingTime[0]}
-                          </FormLabel>
+                        <FormItem className="space-y-2 col-span-1">
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Excerpt
+                            </FormLabel>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setIsExcerptEditable(!isExcerptEditable)
+                              }
+                              className="h-7 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              {isExcerptEditable ? (
+                                <>
+                                  <Lock className="w-3 h-3 mr-1" />
+                                  Lock
+                                </>
+                              ) : (
+                                <>
+                                  <Edit2 className="w-3 h-3 mr-1" />
+                                  Edit
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           <FormControl>
-                            <Slider
-                              className="bg-purple-100 dark:bg-purple-900/20"
-                              min={1}
-                              max={60}
-                              step={1}
-                              value={readingTime}
-                              onValueChange={(value) => {
-                                setReadingTime(value);
-                                field.onChange(value[0]);
-                              }}
+                            <Textarea
+                              placeholder="Brief summary of your post..."
+                              className="min-h-[100px] bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                              {...field}
+                              readOnly={!isExcerptEditable}
                             />
                           </FormControl>
-                          <FormMessage className="text-red-500" />
+                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                         </FormItem>
                       )}
                     />
                   </div>
-                </div>
-
-                {/* Tags Section */}
-                <div className="space-y-3">
-                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Tags
-                  </FormLabel>
-                  <div className="flex gap-2">
-                    <Input
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addTag();
-                        }
-                      }}
-                      placeholder="Add a tag..."
-                      className="flex-1 h-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
-                    />
-                    <Button
-                      type="button"
-                      onClick={addTag}
-                      variant="outline"
-                      className="h-10 px-4"
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  {form.watch("tags")?.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {form.watch("tags")?.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        >
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="ml-2 hover:text-blue-900 dark:hover:text-blue-100"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -906,19 +886,7 @@ export function BlogPostForm({
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
                   <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="w-6 h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <svg
-                        className="w-3 h-3 text-green-600 dark:text-green-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
+                      <Search className="w-3 h-3 text-green-600 dark:text-green-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {seoVisibility.seo && seoVisibility.social
@@ -951,7 +919,7 @@ export function BlogPostForm({
                               <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
                                 {field.value?.length || 0}/60 characters
                               </FormDescription>
-                              <FormMessage className="text-red-500" />
+                              <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                             </FormItem>
                           )}
                         />
@@ -975,7 +943,7 @@ export function BlogPostForm({
                                 {field.value?.length || 0}/160 characters
                                 (Recommended: 150-160)
                               </FormDescription>
-                              <FormMessage className="text-red-500" />
+                              <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                             </FormItem>
                           )}
                         />
@@ -1000,7 +968,7 @@ export function BlogPostForm({
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage className="text-red-500" />
+                              <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                             </FormItem>
                           )}
                         />
@@ -1023,7 +991,7 @@ export function BlogPostForm({
                               <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
                                 {field.value?.length || 0}/160 characters
                               </FormDescription>
-                              <FormMessage className="text-red-500" />
+                              <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                             </FormItem>
                           )}
                         />
@@ -1046,7 +1014,7 @@ export function BlogPostForm({
                               <FormDescription className="text-xs text-gray-500 dark:text-gray-400">
                                 Recommended size: 1200x630px
                               </FormDescription>
-                              <FormMessage className="text-red-500" />
+                              <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
                             </FormItem>
                           )}
                         />
@@ -1065,19 +1033,7 @@ export function BlogPostForm({
                   className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 w-full sm:w-auto"
                   disabled={form.formState.isSubmitting}
                 >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
                 <Button
@@ -1087,61 +1043,19 @@ export function BlogPostForm({
                 >
                   {form.formState.isSubmitting ? (
                     <>
-                      <svg
-                        className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <Loader2 className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" />
                       {postId ? "Updating Post..." : "Creating Post..."}
                     </>
                   ) : (
                     <>
                       {postId ? (
                         <>
-                          <svg
-                            className="w-4 h-4 mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
+                          <Edit2 className="w-4 h-4 mr-2" />
                           Update Post
                         </>
                       ) : (
                         <>
-                          <svg
-                            className="w-4 h-4 mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                            />
-                          </svg>
+                          <Plus className="w-4 h-4 mr-2" />
                           Create Post
                         </>
                       )}

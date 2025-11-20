@@ -130,3 +130,9 @@ export const userRoles = [
   { label: "User", value: "user" },
   { label: "Subscriber", value: "subscriber" },
 ];
+export const postStatus = [
+  { label: "Draft", value: "draft" },
+  { label: "Pending", value: "pending" },
+  { label: "Revision", value: "revision" },
+  { label: "Published", value: "published" },
+];

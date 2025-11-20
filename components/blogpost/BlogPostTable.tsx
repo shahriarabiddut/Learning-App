@@ -170,7 +170,7 @@ export const BlogPostTable = ({
             className="bg-gray-900 text-white hover:bg-red-500 gap-1 dark:bg-red-900 dark:hover:bg-red-700"
           >
             <FaBan className="h-3 w-3" />
-            Deactivate
+            Hide
           </Button>
 
           <Button
@@ -180,7 +180,7 @@ export const BlogPostTable = ({
             className="bg-green-200 text-green-800 hover:bg-green-400 hover:text-white gap-1 dark:bg-green-900 dark:text-green-100 dark:hover:bg-green-700"
           >
             <FaCheckCircle className="h-4 w-4" />
-            Activate
+            Visible
           </Button>
 
           <Button
@@ -191,7 +191,7 @@ export const BlogPostTable = ({
             disabled={selectedBlogPosts.length > 8}
           >
             <FaStar className="h-4 w-4" />
-            Add to Featured
+            Featured
           </Button>
 
           <Button

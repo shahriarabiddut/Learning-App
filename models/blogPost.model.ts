@@ -37,7 +37,7 @@ export interface IBlogPost extends Document {
   categories?: (Schema.Types.ObjectId | string)[];
   tags?: string[];
   featuredImage?: string;
-  status?: "draft" | "published" | "archived";
+  status?: "draft" | "published" | "review" | "pending";
   isActive?: boolean;
   isFeatured?: boolean;
   publishedAt?: Date | null;
@@ -100,7 +100,7 @@ const BlogPostSchema: Schema = new Schema(
     featuredImage: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["draft", "published", "archived"],
+      enum: ["draft", "published", "revision", "pending"],
       default: "draft",
     },
     isActive: { type: Boolean, default: false },
