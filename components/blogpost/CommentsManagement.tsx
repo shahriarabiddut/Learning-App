@@ -17,6 +17,7 @@ import {
   useFetchPostCommentsQuery,
   useUpdateCommentStatusMutation,
 } from "@/lib/redux-features/blogPost/blogPostApi";
+import { CommentStatus } from "@/models/comment.model"; // Import CommentStatus enum
 import {
   Ban,
   CheckCircle,
@@ -37,7 +38,7 @@ interface Comment {
   name: string;
   email?: string;
   body: string;
-  approved: boolean;
+  status: CommentStatus; // Changed from approved: boolean
   createdAt: string;
 }
 
@@ -55,6 +56,7 @@ export const CommentsManagement = ({
   const [filterStatus, setFilterStatus] = useState<
     "all" | "pending" | "approved" | "rejected"
   >("all");
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
@@ -79,12 +81,16 @@ export const CommentsManagement = ({
 
     // Filter by status
     if (filterStatus === "approved") {
-      filtered = filtered.filter((c: Comment) => c.approved);
+      filtered = filtered.filter(
+        (c: Comment) => c.status === CommentStatus.APPROVED
+      );
     } else if (filterStatus === "pending") {
-      filtered = filtered.filter((c: Comment) => c.approved === null);
+      filtered = filtered.filter(
+        (c: Comment) => c.status === CommentStatus.PENDING
+      );
     } else if (filterStatus === "rejected") {
       filtered = filtered.filter(
-        (c: Comment) => c.approved !== null && !c.approved
+        (c: Comment) => c.status === CommentStatus.REJECTED
       );
     }
 
@@ -102,15 +108,18 @@ export const CommentsManagement = ({
     return filtered;
   }, [comments, filterStatus, searchQuery]);
 
-  // Handle single comment approval/rejection
-  const handleUpdateStatus = async (commentId: string, approved: boolean) => {
+  // Handle single comment status update
+  const handleUpdateStatus = async (
+    commentId: string,
+    status: CommentStatus
+  ) => {
     try {
       await updateCommentStatus({
         postId,
         commentId,
-        approved,
+        status,
       }).unwrap();
-      toast.success(`Comment ${approved ? "approved" : "rejected"}`);
+      toast.success(`Comment ${status}`);
       refetch();
     } catch (error: any) {
       const errorMessage =
@@ -154,7 +163,7 @@ export const CommentsManagement = ({
       const result = await bulkUpdateComments({
         postId,
         commentIds: selectedComments,
-        approved: true,
+        status: CommentStatus.APPROVED,
       }).unwrap();
       toast.success(result.message);
       setSelectedComments([]);
@@ -177,7 +186,7 @@ export const CommentsManagement = ({
       const result = await bulkUpdateComments({
         postId,
         commentIds: selectedComments,
-        approved: false,
+        status: CommentStatus.REJECTED,
       }).unwrap();
       toast.success(result.message);
       setSelectedComments([]);
@@ -229,13 +238,17 @@ export const CommentsManagement = ({
     );
   };
 
-  // Stats
+  // Stats - Updated to use status enum
   const totalComments = comments.length;
-  const approvedCount = comments.filter((c: Comment) => c.approved).length;
-  const rejectedCount = comments.filter(
-    (c: Comment) => !c.approved && c.approved !== null
+  const approvedCount = comments.filter(
+    (c: Comment) => c.status === CommentStatus.APPROVED
   ).length;
-  const pendingCount = totalComments - approvedCount - rejectedCount;
+  const rejectedCount = comments.filter(
+    (c: Comment) => c.status === CommentStatus.REJECTED
+  ).length;
+  const pendingCount = comments.filter(
+    (c: Comment) => c.status === CommentStatus.PENDING
+  ).length;
 
   return (
     <>
@@ -424,26 +437,26 @@ export const CommentsManagement = ({
                             )}
                             <Badge
                               variant={
-                                comment.approved === null
+                                comment.status === CommentStatus.PENDING
                                   ? "outline"
-                                  : comment.approved
+                                  : comment.status === CommentStatus.APPROVED
                                   ? "secondaryGreen"
                                   : "destructive"
                               }
                               className={
-                                comment.approved === null
+                                comment.status === CommentStatus.PENDING
                                   ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
-                                  : comment.approved
+                                  : comment.status === CommentStatus.APPROVED
                                   ? ""
                                   : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                               }
                             >
-                              {comment.approved === null ? (
+                              {comment.status === CommentStatus.PENDING ? (
                                 <>
                                   <Clock className="w-3 h-3 mr-1" />
                                   Pending
                                 </>
-                              ) : comment.approved ? (
+                              ) : comment.status === CommentStatus.APPROVED ? (
                                 <>
                                   <CheckCircle className="w-3 h-3 mr-1" />
                                   Approved
@@ -473,11 +486,14 @@ export const CommentsManagement = ({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {comment.approved === null ? (
+                            {comment.status === CommentStatus.PENDING && (
                               <>
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    handleUpdateStatus(comment._id, true)
+                                    handleUpdateStatus(
+                                      comment._id,
+                                      CommentStatus.APPROVED
+                                    )
                                   }
                                   className="text-green-600"
                                 >
@@ -486,7 +502,10 @@ export const CommentsManagement = ({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    handleUpdateStatus(comment._id, false)
+                                    handleUpdateStatus(
+                                      comment._id,
+                                      CommentStatus.REJECTED
+                                    )
                                   }
                                   className="text-orange-600"
                                 >
@@ -494,25 +513,33 @@ export const CommentsManagement = ({
                                   Reject
                                 </DropdownMenuItem>
                               </>
-                            ) : comment.approved === true ? (
+                            )}
+                            {comment.status === CommentStatus.APPROVED && (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleUpdateStatus(comment._id, false)
+                                  handleUpdateStatus(
+                                    comment._id,
+                                    CommentStatus.REJECTED
+                                  )
                                 }
                                 className="text-orange-600"
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Reject
                               </DropdownMenuItem>
-                            ) : (
+                            )}
+                            {comment.status === CommentStatus.REJECTED && (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleUpdateStatus(comment._id, false)
+                                  handleUpdateStatus(
+                                    comment._id,
+                                    CommentStatus.APPROVED
+                                  )
                                 }
-                                className="text-orange-600"
+                                className="text-green-600"
                               >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Reject
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approve
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem

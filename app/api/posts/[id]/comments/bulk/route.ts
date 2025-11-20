@@ -1,9 +1,10 @@
+import { PERMISSIONS } from "@/lib/middle/permissions";
+import BlogPost from "@/models/blogPost.model";
+import Comment, { CommentStatus } from "@/models/comment.model"; // Import Comment model
 import {
   AuthenticatedorNot,
   isSuperAdmin,
 } from "@/services/dbAndPermission.service";
-import { PERMISSIONS } from "@/lib/middle/permissions";
-import BlogPost from "@/models/blogPost.model";
 import { NextRequest, NextResponse } from "next/server";
 
 // PATCH - Bulk approve/reject comments
@@ -22,11 +23,18 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { commentIds, approved } = body;
+    const { commentIds, status } = body;
 
-    if (!Array.isArray(commentIds) || typeof approved !== "boolean") {
+    if (!Array.isArray(commentIds)) {
       return NextResponse.json(
-        { error: "Invalid request body" },
+        { error: "commentIds must be an array" },
+        { status: 400 }
+      );
+    }
+
+    if (!["approved", "pending", "rejected"].includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid status. Must be: pending, approved, or rejected" },
         { status: 400 }
       );
     }
@@ -40,25 +48,37 @@ export async function PATCH(
       );
     }
 
-    let updatedCount = 0;
-    commentIds.forEach((commentId) => {
-      const comment = post.comments.id(commentId);
-      if (comment) {
-        comment.approved = approved;
-        updatedCount++;
-      }
-    });
+    // Check if user owns the post or is super admin
+    const superAdmin = isSuperAdmin(user);
+    if (!superAdmin && post.author?.toString() !== user.id) {
+      return NextResponse.json(
+        { error: "You don't have permission to manage comments on this post" },
+        { status: 403 }
+      );
+    }
 
-    if (updatedCount > 0) {
-      post.updatedBy = user.userId;
-      await post.save();
+    // Bulk update comments in Comment collection
+    const result = await Comment.updateMany(
+      {
+        _id: { $in: commentIds },
+        post: params.id, // Ensure comments belong to this post
+      },
+      {
+        $set: { status },
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      // Update post's updatedBy field
+      await BlogPost.findByIdAndUpdate(params.id, {
+        updatedBy: user.id,
+      });
     }
 
     return NextResponse.json({
-      message: `${updatedCount} comment(s) ${
-        approved ? "approved" : "rejected"
-      }`,
-      updatedCount,
+      message: `${result.modifiedCount} comment(s) updated to ${status}`,
+      updatedCount: result.modifiedCount,
+      status, // Include the status that was set
     });
   } catch (error) {
     console.error("Failed to bulk update comments:", error);
@@ -103,16 +123,29 @@ export async function DELETE(
       );
     }
 
-    const originalLength = post.comments.length;
-    post.comments = post.comments.filter(
-      (c: any) => !commentIds.includes(c._id.toString())
-    );
+    // Check if user owns the post or is super admin
+    const superAdmin = isSuperAdmin(user);
+    if (!superAdmin && post.author?.toString() !== user.id) {
+      return NextResponse.json(
+        { error: "You don't have permission to delete comments on this post" },
+        { status: 403 }
+      );
+    }
 
-    const deletedCount = originalLength - post.comments.length;
+    // Bulk delete comments from Comment collection
+    const result = await Comment.deleteMany({
+      _id: { $in: commentIds },
+      post: params.id, // Ensure comments belong to this post
+    });
+
+    const deletedCount = result.deletedCount || 0;
 
     if (deletedCount > 0) {
-      post.updatedBy = user.userId;
-      await post.save();
+      // Decrement commentsCount in BlogPost
+      await BlogPost.findByIdAndUpdate(params.id, {
+        $inc: { commentsCount: -deletedCount },
+        updatedBy: user.id,
+      });
     }
 
     return NextResponse.json({

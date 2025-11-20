@@ -108,7 +108,7 @@ export const BlogPostModal = ({
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="details">Post Details</TabsTrigger>
                 <TabsTrigger value="comments">
-                  Comments ({selectedBlogPost.comments?.length || 0})
+                  Comments ({selectedBlogPost.commentsCount || 0})
                 </TabsTrigger>
               </TabsList>
 

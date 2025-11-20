@@ -479,7 +479,7 @@ export const blogPostApi = createApi({
           searchParams.set("sortBy", sortBy);
         }
 
-        return `/category/${categoryId}?${searchParams.toString()}`;
+        return `/public/category/${categoryId}?${searchParams.toString()}`;
       },
       providesTags: (result, error, { categoryId }) => {
         if (error) return [{ type: "BlogPosts", id: `CATEGORY-${categoryId}` }];
@@ -881,12 +881,12 @@ export const blogPostApi = createApi({
     // Approve/reject comment
     updateCommentStatus: build.mutation<
       IBlogPost,
-      { postId: string; commentId: string; approved: boolean }
+      { postId: string; commentId: string; status: string }
     >({
-      query: ({ postId, commentId, approved }) => ({
+      query: ({ postId, commentId, status }) => ({
         url: `/${postId}/comments/${commentId}`,
         method: "PATCH",
-        body: { approved },
+        body: { status },
       }),
       invalidatesTags: (result, error, { postId }) => [
         { type: "BlogPosts", id: postId },
@@ -944,12 +944,12 @@ export const blogPostApi = createApi({
     // Bulk approve/reject comments
     bulkUpdateComments: build.mutation<
       { message: string; updatedCount: number },
-      { postId: string; commentIds: string[]; approved: boolean }
+      { postId: string; commentIds: string[]; status: string }
     >({
-      query: ({ postId, commentIds, approved }) => ({
+      query: ({ postId, commentIds, status }) => ({
         url: `/${postId}/comments/bulk`,
         method: "PATCH",
-        body: { commentIds, approved },
+        body: { commentIds, status },
       }),
       invalidatesTags: (result, error, { postId }) => [
         { type: "BlogPosts", id: postId },

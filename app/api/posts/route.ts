@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     let query: any = {};
     const superAdmin = isSuperAdmin(user);
 
-    // Non-super admins can only see their own posts or posts from their store
+    // Non-super admins can only see their own posts
     if (user && !superAdmin) {
       query.$or = [{ author: user.id }];
     }
@@ -76,7 +76,9 @@ export async function GET(request: NextRequest) {
     if (isFeatured === "true") {
       query.isFeatured = true;
     }
-    // query.isActive = isActive === "true";
+    if (isActive === "true" || isActive === "false") {
+      query.isActive = isActive === "true";
+    }
 
     const [rawData, total] = await Promise.all([
       BlogPost.find(query)
@@ -121,7 +123,7 @@ export async function GET(request: NextRequest) {
           publishedAt: obj.publishedAt,
           seo: obj.seo,
           allowComments: obj.allowComments,
-          comments: obj.comments,
+          commentsCount: obj.commentsCount, // Changed from comments array to commentsCount
           views: obj.views,
           readingTime: obj.readingTime,
           createdBy: obj.createdBy,

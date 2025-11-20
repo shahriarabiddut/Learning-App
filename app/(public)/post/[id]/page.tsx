@@ -7,7 +7,7 @@ import { BlogPostView } from "@/components/pages/public/BlogPostView";
 
 // Shared fetch function
 const fetchBlogPost = async (id: string): Promise<IBlogPost> => {
-  const res = await fetch(`${API_SITE_URL}/posts/slug/${id}`, {
+  const res = await fetch(`${API_SITE_URL}/posts/public/slug/${id}`, {
     next: { revalidate: 600 }, // revalidate every 10 minutes
   });
   if (!res.ok) notFound();

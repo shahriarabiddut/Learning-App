@@ -4,6 +4,7 @@ import {
 } from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
+import Comment from "@/models/comment.model"; // Import Comment model
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import "@/models/users.model";
@@ -65,7 +66,7 @@ export async function GET(
       publishedAt: post.publishedAt,
       seo: post.seo,
       allowComments: post.allowComments,
-      comments: post.comments,
+      commentsCount: post.commentsCount,
       views: post.views,
       readingTime: post.readingTime,
       createdBy: post.createdBy,
@@ -209,6 +210,9 @@ export async function DELETE(
         { status: 403 }
       );
     }
+
+    // Delete all comments associated with this post
+    await Comment.deleteMany({ post: id });
 
     const deletedPost = await BlogPost.findByIdAndDelete(id);
 

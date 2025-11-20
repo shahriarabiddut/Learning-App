@@ -4,6 +4,7 @@ import {
 } from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
+import Comment, { CommentStatus } from "@/models/comment.model"; // Import Comment model
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
@@ -36,11 +37,11 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { approved } = body;
+    const { status } = body;
 
-    if (typeof approved !== "boolean") {
+    if (!["approved", "pending", "rejected"].includes(status)) {
       return NextResponse.json(
-        { error: "approved must be a boolean" },
+        { error: "Invalid status. Must be: pending, approved, or rejected" },
         { status: 400 }
       );
     }
@@ -60,32 +61,30 @@ export async function PATCH(
       );
     }
 
-    // Find and update comment
-    const comment = post.comments.id(commentId);
+    // Find and update comment in Comment collection
+    const comment = await Comment.findOne({
+      _id: commentId,
+      post: id,
+    });
 
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
-    comment.approved = approved;
-    post.updatedBy = user.id;
-    console.log(approved);
+    comment.status = status;
+    await comment.save();
 
-    await post.save();
+    // Update post's updatedBy field
+    await BlogPost.findByIdAndUpdate(id, {
+      updatedBy: user.id,
+    });
 
-    const updatedPost = await BlogPost.findById(id)
-      .populate({
-        path: "author",
-        select: "name email",
-      })
-      .populate({
-        path: "categories",
-        select: "name",
-      });
-    console.log(updatedPost);
-    revalidatePath(`/post/${post.slug}`);
+    revalidatePath(`/blog/${post.slug}`);
 
-    return NextResponse.json(updatedPost);
+    return NextResponse.json({
+      message: "Comment updated successfully",
+      comment,
+    });
   } catch (error) {
     console.error("Failed to update comment:", error);
     return NextResponse.json(
@@ -135,32 +134,31 @@ export async function DELETE(
       );
     }
 
-    // Find and remove comment
-    const comment = post.comments.id(commentId);
+    // Find and verify comment exists and belongs to this post
+    const comment = await Comment.findOne({
+      _id: commentId,
+      post: id,
+    });
 
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
-    // Remove the comment
-    post.comments.pull(commentId);
-    post.updatedBy = user.id;
+    // Delete the comment
+    await Comment.findByIdAndDelete(commentId);
 
-    await post.save();
-
-    const updatedPost = await BlogPost.findById(id)
-      .populate({
-        path: "author",
-        select: "name email",
-      })
-      .populate({
-        path: "categories",
-        select: "name",
-      });
+    // Decrement commentsCount in BlogPost
+    await BlogPost.findByIdAndUpdate(id, {
+      $inc: { commentsCount: -1 },
+      updatedBy: user.id,
+    });
 
     revalidatePath(`/blog/${post.slug}`);
 
-    return NextResponse.json(updatedPost);
+    return NextResponse.json({
+      message: "Comment deleted successfully",
+      commentId,
+    });
   } catch (error) {
     console.error("Failed to delete comment:", error);
     return NextResponse.json(

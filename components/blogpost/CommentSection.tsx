@@ -2,23 +2,21 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 import { useAddCommentMutation } from "@/lib/redux-features/blogPost/blogPostApi";
-import { IComment } from "@/models/blogPost.model";
+import { CommentStatus, IComment } from "@/models/comment.model"; // Import CommentStatus enum
 import {
-  Loader2,
-  MessageSquare,
-  Send,
   Clock,
-  Reply as ReplyIcon,
-  X,
+  Loader2,
   LogIn,
+  MessageSquare,
+  Reply as ReplyIcon,
+  Send,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface CommentsSectionProps {
@@ -92,7 +90,9 @@ export function CommentsSection({
   }, [session]);
 
   // Filter only approved comments
-  const approvedComments = comments.filter((comment) => comment.approved);
+  const approvedComments = comments.filter(
+    (comment) => comment.status === CommentStatus.APPROVED
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,12 +337,12 @@ export function CommentsSection({
                           size="sm"
                           onClick={() =>
                             setReplyingTo(
-                              replyingTo === comment.name ? null : comment.name
+                              replyingTo === comment.id ? null : comment.id
                             )
                           }
                           className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                         >
-                          {replyingTo === comment.name ? (
+                          {replyingTo === comment.id ? (
                             <>
                               <X className="w-4 h-4 mr-1" />
                               Cancel
@@ -361,7 +361,7 @@ export function CommentsSection({
                     </p>
 
                     {/* Reply Form */}
-                    {replyingTo === comment.name && (
+                    {replyingTo === comment.id && (
                       <div className="mt-4 pl-4 border-l-2 border-emerald-500">
                         <Textarea
                           value={replyBody}
@@ -372,7 +372,7 @@ export function CommentsSection({
                         />
                         <div className="flex gap-2">
                           <Button
-                            onClick={() => handleReply(comment.name)}
+                            onClick={() => handleReply(comment.id)}
                             size="sm"
                             className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
                           >
@@ -393,33 +393,8 @@ export function CommentsSection({
                       </div>
                     )}
 
-                    {/* Nested Replies */}
-                    {comment.replies && comment.replies.length > 0 && (
-                      <div className="mt-6 space-y-4 pl-6 border-l-2 border-emerald-200 dark:border-emerald-800">
-                        {comment.replies
-                          .filter((reply) => reply.approved)
-                          .map((reply, replyIndex) => (
-                            <div key={replyIndex} className="flex gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
-                                {reply.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h5 className="font-semibold text-slate-900 dark:text-white">
-                                    {reply.name}
-                                  </h5>
-                                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    {formatCommentDate(reply.createdAt)}
-                                  </span>
-                                </div>
-                                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
-                                  {reply.body}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
+                    {/* Nested Replies - Note: This needs backend support for fetching nested comments */}
+                    {/* You would need to fetch replies separately or include them in the parent comment */}
                   </div>
                 </div>
               </CardContent>

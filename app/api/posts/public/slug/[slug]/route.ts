@@ -1,4 +1,5 @@
 import BlogPost from "@/models/blogPost.model";
+import Comment from "@/models/comment.model";
 import { NextRequest, NextResponse } from "next/server";
 import "@/models/users.model";
 import "@/models/categories.model";
@@ -37,7 +38,7 @@ export async function GET(
       );
     }
 
-    // Increment views atomically if enabled (default behavior) - async/non-blocking
+    // Increment views atomically - async/non-blocking
     const viewIncrementPromise = (async () => {
       try {
         const updatedPost = await BlogPost.findByIdAndUpdate(
@@ -52,7 +53,33 @@ export async function GET(
       }
     })();
 
-    // Fetch related posts asynchronously (non-blocking)
+    // Fetch approved comments asynchronously
+    const commentsPromise = (async () => {
+      try {
+        const comments = await Comment.find({
+          post: post._id,
+          status: "approved",
+          isActive: true,
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        return comments.map((comment) => ({
+          id: comment._id?.toString(),
+          name: comment.name,
+          email: comment.email,
+          body: comment.body,
+          status: comment.status,
+          parentComment: comment.parentComment?.toString() || null,
+          createdAt: comment.createdAt,
+        }));
+      } catch (error) {
+        console.error("Failed to fetch comments:", error);
+        return [];
+      }
+    })();
+
+    // Fetch related posts asynchronously
     const relatedPostsPromise = (async () => {
       try {
         // Build query to find related posts
@@ -121,9 +148,10 @@ export async function GET(
       }
     })();
 
-    // Wait for both operations to complete
-    const [updatedViewCount, relatedPosts] = await Promise.all([
+    // Wait for all operations to complete
+    const [updatedViewCount, comments, relatedPosts] = await Promise.all([
       viewIncrementPromise,
+      commentsPromise,
       relatedPostsPromise,
     ]);
 
@@ -154,7 +182,8 @@ export async function GET(
       publishedAt: post.publishedAt,
       seo: post.seo,
       allowComments: post.allowComments,
-      comments: post.comments?.filter((comment: any) => comment.approved),
+      comments, // Approved comments from Comment collection
+      commentsCount: post.commentsCount, // Total comments count
       views: currentViews, // Return the incremented view count
       readingTime: post.readingTime,
       createdAt: post.createdAt,

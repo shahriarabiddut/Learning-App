@@ -1,12 +1,10 @@
-import {
-  AuthenticatedorNot,
-  isSuperAdmin,
-} from "@/services/dbAndPermission.service";
+import connectDB from "@/lib/connectDB";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
-import { NextRequest, NextResponse } from "next/server";
+import Comment from "@/models/comment.model"; // Import Comment model
 import "@/models/users.model";
-import connectDB from "@/lib/connectDB";
+import { AuthenticatedorNot } from "@/services/dbAndPermission.service";
+import { NextRequest, NextResponse } from "next/server";
 
 // GET all comments for a post
 export async function GET(
@@ -23,8 +21,9 @@ export async function GET(
   if (user instanceof NextResponse) return user;
 
   try {
+    // Check if post exists
     const post = await BlogPost.findById(params.id)
-      .select("comments allowComments")
+      .select("allowComments")
       .lean();
 
     if (!post) {
@@ -34,8 +33,16 @@ export async function GET(
       );
     }
 
+    // Fetch comments from Comment collection
+    const comments = await Comment.find({
+      post: params.id,
+      isActive: true,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
     return NextResponse.json({
-      comments: post.comments || [],
+      comments: comments || [],
       allowComments: post.allowComments,
     });
   } catch (error) {
@@ -54,9 +61,10 @@ export async function POST(
 ) {
   const params = await context.params;
   await connectDB();
+
   try {
     const body = await request.json();
-    const { name, email, body: commentBody } = body;
+    const { name, email, body: commentBody, parentComment } = body;
 
     if (!name || !commentBody) {
       return NextResponse.json(
@@ -81,20 +89,35 @@ export async function POST(
       );
     }
 
-    const newComment = {
-      name,
-      email: email || undefined,
-      body: commentBody,
-      approved: null,
-      createdAt: new Date(),
-    };
+    // If replying to a comment, verify parent exists
+    if (parentComment) {
+      const parentExists = await Comment.findById(parentComment);
+      if (!parentExists) {
+        return NextResponse.json(
+          { error: "Parent comment not found" },
+          { status: 404 }
+        );
+      }
+    }
 
-    post.comments.push(newComment);
-    await post.save();
+    // Create new comment document
+    const newComment = await Comment.create({
+      post: params.id,
+      parentComment: parentComment || null,
+      name,
+      email: email || null,
+      body: commentBody,
+      status: "pending", // Pending approval by default
+      isActive: true,
+    });
+
+    await BlogPost.findByIdAndUpdate(params.id, {
+      $inc: { commentsCount: 1 },
+    });
 
     return NextResponse.json({
       message: "Comment added successfully (pending approval)",
-      comment: post.comments[post.comments.length - 1],
+      comment: newComment,
     });
   } catch (error) {
     console.error("Failed to add comment:", error);

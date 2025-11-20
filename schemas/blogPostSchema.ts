@@ -14,7 +14,7 @@ export const commentSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email().optional().or(z.literal("")),
   body: z.string().min(1, "Comment body is required"),
-  approved: z.boolean().optional(),
+  status: z.string().optional(),
   replies: z.lazy(() => z.array(commentSchema)).optional(),
 });
 

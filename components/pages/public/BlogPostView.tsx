@@ -1,25 +1,23 @@
 "use client";
 
-import Footer from "@/components/Footer";
-import Header from "@/components/shared/PublicHeader";
 import RichTextDisplay from "@/components/shared/RichTextDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getCategoryName } from "@/lib/helper/clientHelperfunc";
 import { IBlogPost } from "@/models/blogPost.model";
 import {
+  Bookmark,
+  BookmarkPlus,
   Calendar,
   Clock,
   Eye,
-  Share2,
-  Tag,
-  User,
-  BookmarkPlus,
-  Bookmark,
   Facebook,
-  Twitter,
   Linkedin,
   Link as LinkIcon,
+  Share2,
+  Tag,
+  Twitter,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,7 +25,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CommentsSection } from "../../blogpost/CommentSection";
 import { RelatedPosts } from "../../blogpost/RelatedPosts";
-import { getCategoryName } from "@/lib/helper/clientHelperfunc";
 
 interface BlogPostViewProps {
   initialPost: IBlogPost & {

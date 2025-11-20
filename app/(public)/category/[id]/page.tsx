@@ -7,7 +7,7 @@ import SingleCategoryPage from "@/components/pages/public/SingleCategoryPage";
 
 // Fetch category by ID or slug
 const fetchCategory = async (id: string): Promise<ICategory> => {
-  const res = await fetch(`${API_SITE_URL}/posts/category/${id}`, {
+  const res = await fetch(`${API_SITE_URL}/posts/public/category/${id}`, {
     next: { revalidate: 3600 },
   });
   if (!res.ok) notFound();
