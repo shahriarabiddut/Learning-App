@@ -9,30 +9,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IBlogPost } from "@/models/blogPost.model";
+import { IBlogPage } from "@/models/blogPage.model";
 import { useState } from "react";
 import { FaBan, FaCheckCircle } from "react-icons/fa";
 import { FaStar, FaStarHalfStroke } from "react-icons/fa6";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BlogPostActions } from "./BlogPostActions";
+import { BlogPageActions } from "./BlogPageActions";
 import { Calendar, Clock, Eye, FileText, User } from "lucide-react";
 import Image from "next/image";
 import { formatDate, getStatusBadge } from "@/lib/helper/clientHelperfunc";
 
-interface BlogPostTableProps {
-  blogposts: IBlogPost[];
-  handleViewClick: (blogpost: IBlogPost) => void;
-  handleEditClick: (blogpost: IBlogPost) => void;
+interface BlogPageTableProps {
+  blogpages: IBlogPage[];
+  handleViewClick: (blogpage: IBlogPage) => void;
+  handleEditClick: (blogpage: IBlogPage) => void;
   handleDeleteClick: (id: string) => void;
-  handleDuplicateClick: (blogpost: IBlogPost) => void;
+  handleDuplicateClick: (blogpage: IBlogPage) => void;
   handleToggleStatusClick: (id: string, currentStatus: boolean) => void;
   handleBulkDelete: (ids: string[]) => void;
   handleBulkStatusToggle: (ids: string[], targetStatus: boolean) => void;
   handleFeaturedStatusToggle: (ids: string[], targetStatus: boolean) => void;
 }
 
-export const BlogPostTable = ({
-  blogposts,
+export const BlogPageTable = ({
+  blogpages,
   handleViewClick,
   handleEditClick,
   handleDeleteClick,
@@ -41,34 +41,34 @@ export const BlogPostTable = ({
   handleBulkDelete,
   handleBulkStatusToggle,
   handleFeaturedStatusToggle,
-}: BlogPostTableProps) => {
-  const [selectedBlogPosts, setSelectedBlogPosts] = useState<string[]>([]);
+}: BlogPageTableProps) => {
+  const [selectedBlogPages, setSelectedBlogPages] = useState<string[]>([]);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
 
   // Toggle selection for a single blog post
-  const toggleBlogPostSelection = (blogpostId: string) => {
-    setSelectedBlogPosts((prev) =>
-      prev.includes(blogpostId)
-        ? prev.filter((id) => id !== blogpostId)
-        : [...prev, blogpostId]
+  const toggleBlogPageSelection = (blogpageId: string) => {
+    setSelectedBlogPages((prev) =>
+      prev.includes(blogpageId)
+        ? prev.filter((id) => id !== blogpageId)
+        : [...prev, blogpageId]
     );
   };
 
   // Toggle select all on current page
   const toggleSelectAll = () => {
-    if (selectedBlogPosts.length === blogposts.length) {
-      setSelectedBlogPosts([]);
+    if (selectedBlogPages.length === blogpages.length) {
+      setSelectedBlogPages([]);
     } else {
-      setSelectedBlogPosts(blogposts.map((blogpost) => blogpost?.id));
+      setSelectedBlogPages(blogpages.map((blogpage) => blogpage?.id));
     }
   };
 
   const handleCheckboxChange = (
     checked: boolean | string,
     index: number,
-    blogpostId: string | undefined
+    blogpageId: string | undefined
   ) => {
-    if (checked === "indeterminate" || !blogpostId) return;
+    if (checked === "indeterminate" || !blogpageId) return;
 
     if (
       typeof window !== "undefined" &&
@@ -79,13 +79,13 @@ export const BlogPostTable = ({
       const start = Math.min(index, lastCheckedIndex);
       const end = Math.max(index, lastCheckedIndex);
 
-      const range = blogposts
+      const range = blogpages
         .slice(start, end + 1)
-        .map((blogpost) => blogpost.id)
+        .map((blogpage) => blogpage.id)
         .filter((id): id is string => !!id);
 
-      setSelectedBlogPosts((prev) => {
-        const shouldAdd = !prev.includes(blogposts[lastCheckedIndex].id);
+      setSelectedBlogPages((prev) => {
+        const shouldAdd = !prev.includes(blogpages[lastCheckedIndex].id);
 
         if (shouldAdd) {
           const newSelections = new Set(prev);
@@ -96,38 +96,38 @@ export const BlogPostTable = ({
         }
       });
     } else {
-      toggleBlogPostSelection(blogpostId);
+      toggleBlogPageSelection(blogpageId);
       setLastCheckedIndex(index);
     }
   };
 
   // Handle bulk delete
   const handleBulkDeleteClick = () => {
-    if (selectedBlogPosts.length === 0) return;
-    handleBulkDelete(selectedBlogPosts);
-    setSelectedBlogPosts([]);
+    if (selectedBlogPages.length === 0) return;
+    handleBulkDelete(selectedBlogPages);
+    setSelectedBlogPages([]);
   };
 
   // Handle bulk status toggle
   const handleBulkStatusToggleClick = (targetStatus: boolean) => {
-    handleBulkStatusToggle(selectedBlogPosts, targetStatus);
+    handleBulkStatusToggle(selectedBlogPages, targetStatus);
   };
 
   // Handle Featured Click
   const handleFeaturedClick = (targetStatus: boolean) => {
-    handleFeaturedStatusToggle(selectedBlogPosts, targetStatus);
+    handleFeaturedStatusToggle(selectedBlogPages, targetStatus);
   };
 
   return (
     <>
-      {selectedBlogPosts.length > 0 && (
+      {selectedBlogPages.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-4 bg-muted rounded-md px-4 py-3">
           <span className="text-sm font-medium">
-            {selectedBlogPosts.length} selected
+            {selectedBlogPages.length} selected
           </span>
 
           <Button variant="outline" size="sm" onClick={toggleSelectAll}>
-            {selectedBlogPosts.length === blogposts.length
+            {selectedBlogPages.length === blogpages.length
               ? "Deselect all"
               : "Select all"}
           </Button>
@@ -165,7 +165,7 @@ export const BlogPostTable = ({
             size="sm"
             onClick={() => handleFeaturedClick(true)}
             className="bg-orange-200 text-orange-800 hover:bg-orange-400 hover:text-white gap-1 dark:bg-orange-900 dark:text-orange-100 dark:hover:bg-orange-700"
-            disabled={selectedBlogPosts.length > 8}
+            disabled={selectedBlogPages.length > 8}
           >
             <FaStar className="h-4 w-4" />
             Featured
@@ -191,8 +191,8 @@ export const BlogPostTable = ({
                 <div className="flex items-center gap-2">
                   <Checkbox
                     checked={
-                      blogposts.length > 0 &&
-                      selectedBlogPosts.length === blogposts.length
+                      blogpages.length > 0 &&
+                      selectedBlogPages.length === blogpages.length
                     }
                     onCheckedChange={toggleSelectAll}
                     className="mr-2"
@@ -208,28 +208,28 @@ export const BlogPostTable = ({
           </TableHeader>
 
           <TableBody>
-            {blogposts.map((blogpost, index) => {
-              const statusInfo = getStatusBadge(blogpost.status || "draft");
+            {blogpages.map((blogpage, index) => {
+              const statusInfo = getStatusBadge(blogpage.status || "draft");
 
               return (
-                <TableRow key={blogpost.id} className="hover:bg-muted/30">
+                <TableRow key={blogpage.id} className="hover:bg-muted/30">
                   {/* Post Details Column */}
                   <TableCell className="py-3">
                     <div className="flex items-start gap-3">
                       <Checkbox
-                        checked={selectedBlogPosts.includes(blogpost.id)}
+                        checked={selectedBlogPages.includes(blogpage.id)}
                         onCheckedChange={(checked) =>
-                          handleCheckboxChange(checked, index, blogpost.id)
+                          handleCheckboxChange(checked, index, blogpage.id)
                         }
                         className="mr-1 mt-1"
                       />
 
                       {/* Thumbnail */}
                       <div className="flex-shrink-0 w-16 h-16 rounded-lg border-2 border-border bg-muted overflow-hidden relative">
-                        {blogpost.featuredImage ? (
+                        {blogpage.featuredImage ? (
                           <Image
-                            src={blogpost.featuredImage}
-                            alt={blogpost.title}
+                            src={blogpage.featuredImage}
+                            alt={blogpage.title}
                             fill
                             className="object-cover"
                           />
@@ -243,10 +243,10 @@ export const BlogPostTable = ({
                       {/* Title and Meta */}
                       <div
                         className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => handleViewClick(blogpost)}
+                        onClick={() => handleViewClick(blogpage)}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          {blogpost.isFeatured && (
+                          {blogpage.isFeatured && (
                             <Badge
                               variant="outline"
                               className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 px-1 py-0"
@@ -257,41 +257,41 @@ export const BlogPostTable = ({
                           <Badge className={statusInfo.className}>
                             {statusInfo.label}
                           </Badge>
-                          {blogpost.categories &&
-                            blogpost.categories.length > 0 && (
+                          {blogpage.categories &&
+                            blogpage.categories.length > 0 && (
                               <Badge variant="outline" className="text-xs">
-                                {typeof blogpost.categories[0] === "string"
-                                  ? blogpost.categories[0]
-                                  : blogpost.categories[0]?.name ||
+                                {typeof blogpage.categories[0] === "string"
+                                  ? blogpage.categories[0]
+                                  : blogpage.categories[0]?.name ||
                                     "Uncategorized"}
                               </Badge>
                             )}
                         </div>
                         <h3 className="font-semibold text-foreground line-clamp-1 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                          {blogpost.title}
+                          {blogpage.title}
                         </h3>
-                        {blogpost.excerpt && (
+                        {blogpage.excerpt && (
                           <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                            {blogpost.excerpt}
+                            {blogpage.excerpt}
                           </p>
                         )}
 
                         {/* Mobile view condensed info */}
                         <div className="md:hidden flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-2">
-                          {blogpost.authorName && (
+                          {blogpage.authorName && (
                             <div className="flex items-center gap-1">
                               <User className="h-3 w-3" />
-                              {blogpost.authorName}
+                              {blogpage.authorName}
                             </div>
                           )}
                           <div className="flex items-center gap-1">
                             <Eye className="h-3 w-3" />
-                            {blogpost.views || 0}
+                            {blogpage.views || 0}
                           </div>
-                          {blogpost.readingTime && (
+                          {blogpage.readingTime && (
                             <div className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {blogpost.readingTime}m
+                              {blogpage.readingTime}m
                             </div>
                           )}
                         </div>
@@ -304,7 +304,7 @@ export const BlogPostTable = ({
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        {blogpost.authorName || "Unknown"}
+                        {blogpage.authorName || "Unknown"}
                       </span>
                     </div>
                   </TableCell>
@@ -314,12 +314,12 @@ export const BlogPostTable = ({
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Eye className="h-3 w-3" />
-                        <span>{blogpost.views || 0} views</span>
+                        <span>{blogpage.views || 0} views</span>
                       </div>
-                      {blogpost.readingTime && (
+                      {blogpage.readingTime && (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          <span>{blogpost.readingTime} min</span>
+                          <span>{blogpage.readingTime} min</span>
                         </div>
                       )}
                     </div>
@@ -331,7 +331,7 @@ export const BlogPostTable = ({
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
                         {formatDate(
-                          blogpost.publishedAt || blogpost.createdAt,
+                          blogpage.publishedAt || blogpage.createdAt,
                           true
                         )}
                       </span>
@@ -340,17 +340,17 @@ export const BlogPostTable = ({
 
                   {/* Actions */}
                   <TableCell className="py-3 text-center">
-                    <BlogPostActions
-                      blogpost={blogpost}
-                      onEdit={() => handleEditClick(blogpost)}
-                      onView={() => handleViewClick(blogpost)}
-                      onDelete={() => handleDeleteClick(blogpost.id)}
-                      onDuplicate={() => handleDuplicateClick(blogpost)}
+                    <BlogPageActions
+                      blogpage={blogpage}
+                      onEdit={() => handleEditClick(blogpage)}
+                      onView={() => handleViewClick(blogpage)}
+                      onDelete={() => handleDeleteClick(blogpage.id)}
+                      onDuplicate={() => handleDuplicateClick(blogpage)}
                       showtoggleButtons={false}
                       onToggleStatus={() =>
                         handleToggleStatusClick(
-                          blogpost.id,
-                          blogpost.isActive || false
+                          blogpage.id,
+                          blogpage.isActive || false
                         )
                       }
                     />

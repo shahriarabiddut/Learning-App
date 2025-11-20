@@ -78,4 +78,28 @@ export const NAV_LINKS = [
       },
     ],
   },
+
+  {
+    name: "Pages",
+    icon: File,
+    permission: [PERMISSIONS.MANAGE_PAGES, PERMISSIONS.VIEW_PAGES],
+    children: [
+      {
+        id: "Pages",
+        name: "All Pages",
+        href: "/dashboard/pages",
+        icon: Files,
+        permission: PERMISSIONS.VIEW_PAGES,
+      },
+      {
+        id: "add-page",
+        name: "Add New Page",
+        icon: FilePlus,
+        href: "/dashboard/page/create",
+        permission: PERMISSIONS.MANAGE_PAGES,
+        action: true,
+        form: "page",
+      },
+    ],
+  },
 ];

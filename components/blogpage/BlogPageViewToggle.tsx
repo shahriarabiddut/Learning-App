@@ -20,13 +20,11 @@ import {
 import {
   clearAllFilters,
   setFilterAuthor,
-  setFilterCategory,
   setFilterStatus,
-  setFilterTags,
   setShowFeaturedOnly,
   setSortBy,
   setViewMode,
-} from "@/lib/redux-features/blogPost/blogPostSlice";
+} from "@/lib/redux-features/blogPage/blogPageSlice";
 import { useFetchCategoriesQuery } from "@/lib/redux-features/categories/categoriesApi";
 import { Filter, Star, X } from "lucide-react";
 import { useState } from "react";
@@ -34,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppSelector } from "@/lib/redux/hooks";
 
-export const BlogPostViewToggle = ({
+export const BlogPageViewToggle = ({
   dispatch,
   sortBy,
   viewMode,
@@ -44,16 +42,11 @@ export const BlogPostViewToggle = ({
   viewMode: "table" | "grid";
 }) => {
   const [filterOpen, setFilterOpen] = useState(false);
-  const [tagInput, setTagInput] = useState("");
 
   // Get filter state from Redux
-  const {
-    filterStatus,
-    filterAuthor,
-    filterCategory,
-    filterTags,
-    showFeaturedOnly,
-  } = useAppSelector((state) => state.blogPosts);
+  const { filterStatus, filterAuthor, showFeaturedOnly } = useAppSelector(
+    (state) => state.blogPages
+  );
 
   // Fetch categories for filter dropdown
   const { data: categoriesData } = useFetchCategoriesQuery({
@@ -61,34 +54,15 @@ export const BlogPostViewToggle = ({
     limit: 100,
   });
 
-  const categories = categoriesData?.data || [];
-
   // Calculate active filters count
   const activeFiltersCount =
     (filterStatus !== "all" ? 1 : 0) +
     (filterAuthor ? 1 : 0) +
-    (filterCategory ? 1 : 0) +
-    (filterTags.length > 0 ? 1 : 0) +
     (showFeaturedOnly ? 1 : 0);
-
-  // Handle tag addition
-  const handleAddTag = () => {
-    const trimmedTag = tagInput.trim();
-    if (trimmedTag && !filterTags.includes(trimmedTag)) {
-      dispatch(setFilterTags([...filterTags, trimmedTag]));
-      setTagInput("");
-    }
-  };
-
-  // Handle tag removal
-  const handleRemoveTag = (tagToRemove: string) => {
-    dispatch(setFilterTags(filterTags.filter((tag) => tag !== tagToRemove)));
-  };
 
   // Handle clear all filters
   const handleClearFilters = () => {
     dispatch(clearAllFilters());
-    setTagInput("");
   };
 
   return (
@@ -161,29 +135,6 @@ export const BlogPostViewToggle = ({
               </Select>
             </div>
 
-            {/* Category Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Category</label>
-              <Select
-                value={filterCategory || "all"}
-                onValueChange={(value) =>
-                  dispatch(setFilterCategory(value === "all" ? null : value))
-                }
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category: any) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Author Filter */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Author</label>
@@ -204,52 +155,6 @@ export const BlogPostViewToggle = ({
                 >
                   Clear Author Filter
                 </Button>
-              )}
-            </div>
-
-            {/* Tags Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tags</label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add tag to filter..."
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddTag();
-                    }
-                  }}
-                  className="h-9 flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddTag}
-                  size="sm"
-                  className="h-9"
-                >
-                  Add
-                </Button>
-              </div>
-              {filterTags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {filterTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="pl-2 pr-1 py-1"
-                    >
-                      {tag}
-                      <button
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
               )}
             </div>
 
@@ -293,33 +198,11 @@ export const BlogPostViewToggle = ({
               </button>
             </Badge>
           )}
-          {filterCategory && (
-            <Badge variant="secondary" className="pl-2 pr-1 py-1 gap-1">
-              Category
-              <button
-                onClick={() => dispatch(setFilterCategory(null))}
-                className="hover:text-destructive"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          )}
           {filterAuthor && (
             <Badge variant="secondary" className="pl-2 pr-1 py-1 gap-1">
               Author: {filterAuthor}
               <button
                 onClick={() => dispatch(setFilterAuthor(null))}
-                className="hover:text-destructive"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          )}
-          {filterTags.length > 0 && (
-            <Badge variant="secondary" className="pl-2 pr-1 py-1 gap-1">
-              {filterTags.length} tag{filterTags.length > 1 ? "s" : ""}
-              <button
-                onClick={() => dispatch(setFilterTags([]))}
                 className="hover:text-destructive"
               >
                 <X className="h-3 w-3" />

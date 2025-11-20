@@ -136,3 +136,9 @@ export const postStatus = [
   { label: "Revision", value: "revision" },
   { label: "Published", value: "published" },
 ];
+export const pageStatus = [
+  { label: "Draft", value: "draft" },
+  { label: "Pending", value: "pending" },
+  { label: "Revision", value: "revision" },
+  { label: "Published", value: "published" },
+];

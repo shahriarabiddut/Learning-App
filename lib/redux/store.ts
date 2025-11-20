@@ -12,11 +12,15 @@ import categoryReducer, {
 import blogPostsReducer, {
   loadInitialBlogPostUIState,
 } from "@/lib/redux-features/blogPost/blogPostSlice";
+import blogPagesReducer, {
+  loadInitialBlogPageUIState,
+} from "@/lib/redux-features/blogPage/blogPageSlice";
 // RTK Query API slice
 import { setupListeners } from "@reduxjs/toolkit/query";
 import { userApi } from "@/lib/redux-features/user/userApi";
 import { categoryApi } from "@/lib/redux-features/categories/categoriesApi";
 import { blogPostApi } from "@/lib/redux-features/blogPost/blogPostApi";
+import { blogPageApi } from "@/lib/redux-features/blogPage/blogPageApi";
 
 // Persist to localStorage middleware (throttled)
 const localStorageMiddleware = () => {
@@ -59,6 +63,8 @@ export const store = configureStore({
     [categoryApi.reducerPath]: categoryApi.reducer,
     blogPosts: blogPostsReducer,
     [blogPostApi.reducerPath]: blogPostApi.reducer,
+    blogPages: blogPagesReducer,
+    [blogPageApi.reducerPath]: blogPageApi.reducer,
     ui: uiReducer,
     theme: themeReducer,
   },
@@ -67,12 +73,14 @@ export const store = configureStore({
     user: loadInitialUserUIState(),
     categories: loadInitialCategoryUIState(),
     blogPosts: loadInitialBlogPostUIState(),
+    blogPages: loadInitialBlogPageUIState(),
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(userApi.middleware)
       .concat(categoryApi.middleware)
       .concat(blogPostApi.middleware)
+      .concat(blogPageApi.middleware)
       .concat(localStorageMiddleware()),
 });
 

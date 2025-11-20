@@ -1,9 +1,6 @@
-import {
-  AuthenticatedorNot,
-  isSuperAdmin,
-} from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
+import { AuthenticatedorNot } from "@/services/dbAndPermission.service";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -28,15 +25,6 @@ export async function POST(
 
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
-    }
-
-    // Check if user owns the post or is super admin
-    const superAdmin = isSuperAdmin(user);
-    if (!superAdmin && post.author?.toString() !== user.id) {
-      return NextResponse.json(
-        { error: "You don't have permission to publish this post" },
-        { status: 403 }
-      );
     }
 
     // Check if already published
