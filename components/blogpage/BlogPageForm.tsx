@@ -44,7 +44,12 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { pageStatus } from "@/lib/constants/env";
+import {
+  pageStatus,
+  statusForAuthor,
+  statusForAuthorWithRevision,
+} from "@/lib/constants/env";
+import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 
 interface BlogPageFormProps {
   pageId?: string;
@@ -116,7 +121,10 @@ export function BlogPageForm({
   } = useGetBlogPageByIdQuery(pageId!, {
     skip: !pageId,
   });
-
+  const { data: session } = useSession();
+  const isAdmin = useMemo(() => {
+    return session?.user?.role === "admin";
+  }, [session]);
   // Local state
   const [tagInput, setTagInput] = useState("");
   const [readingTime, setReadingTime] = useState([5]);
@@ -378,73 +386,6 @@ export function BlogPageForm({
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       Basic Information
                     </h3>
-                  </div>
-                  {/* Status Toggles */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormControl>
-                            <SearchableSelect
-                              value={field.value || ""}
-                              onValueChange={field.onChange}
-                              placeholder="Select Status"
-                              options={pageStatus}
-                              className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="isActive"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4">
-                            <div className="flex items-center gap-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                                Visible
-                              </FormLabel>
-                            </div>
-                          </div>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="isFeatured"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-4">
-                            <div className="flex items-center gap-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-yellow-700 dark:text-yellow-300 cursor-pointer">
-                                Featured Page
-                              </FormLabel>
-                            </div>
-                          </div>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
                   </div>
                 </div>
 
@@ -902,6 +843,90 @@ export function BlogPageForm({
 
               {/* Form Actions */}
               <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 rounded-b-xl shadow-lg">
+                {/* Status Toggles */}
+                <div
+                  className={`grid grid-cols-1 ${
+                    isAdmin ? `lg:grid-cols-3` : `lg:grid-cols-1`
+                  } gap-4`}
+                >
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            placeholder="Select Status"
+                            size="md"
+                            options={
+                              isAdmin
+                                ? pageStatus
+                                : pageId && page && page?.status === "published"
+                                ? pageStatus
+                                : pageId
+                                ? statusForAuthorWithRevision
+                                : statusForAuthor
+                            }
+                            className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                      </FormItem>
+                    )}
+                  />
+                  {isAdmin && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4">
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Visible
+                                </FormLabel>
+                              </div>
+                            </div>
+                            <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="isFeatured"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-4">
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-yellow-700 dark:text-yellow-300 cursor-pointer">
+                                  Featured Post
+                                </FormLabel>
+                              </div>
+                            </div>
+                            <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                          </FormItem>
+                        )}
+                      />{" "}
+                    </>
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="outline"

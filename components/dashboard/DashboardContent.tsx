@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import SharedLoader from "@/components/shared/Loader/SharedLoader";
 import AdminDashboard from "./AdminDashboard";
 import UserDashboard from "./UserDashboard";
+import AuthorDashboard from "./AuthorDashboard";
 
 export function DashboardContent() {
   const dataSession = useSession();
@@ -33,6 +34,9 @@ export function DashboardContent() {
   // Render dashboard based on role
   if (userRole === "admin") {
     return <AdminDashboard />;
+  }
+  if (userRole === "author") {
+    return <AuthorDashboard />;
   }
 
   return <UserDashboard userId={userId!} />;

@@ -38,7 +38,11 @@ export async function GET(
       })
       .lean();
 
-    if (!post || post?.author?.toString() !== user.id) {
+    if (
+      !post ||
+      (!userCan(user, PERMISSIONS.PUBLISH_POSTS) &&
+        post?.author?.toString() !== user.id)
+    ) {
       return NextResponse.json(
         { error: "Blog post not found" },
         { status: 404 }
@@ -146,6 +150,7 @@ export async function PATCH(
         validation.data.status === "published"
           ? "pending"
           : validation.data.status;
+      payload.isActive = postData.isActive;
     }
     const updatedPost = await BlogPost.findByIdAndUpdate(
       id,

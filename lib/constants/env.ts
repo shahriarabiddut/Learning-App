@@ -136,11 +136,11 @@ export const postStatus = [
   { label: "Revision", value: "revision" },
   { label: "Published", value: "published" },
 ];
-export const postStatusForAuthor = [
+export const statusForAuthor = [
   { label: "Draft", value: "draft" },
   { label: "Publish", value: "pending" },
 ];
-export const postStatusForAuthorWithRevision = [
+export const statusForAuthorWithRevision = [
   { label: "Draft", value: "draft" },
   { label: "Pending", value: "revision" },
   { label: "Publish", value: "pending" },

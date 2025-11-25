@@ -1,6 +1,7 @@
 import {
   AuthenticatedorNot,
   isSuperAdmin,
+  userCan,
 } from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPage from "@/models/blogPage.model";
@@ -9,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import "@/models/users.model";
 import "@/models/categories.model";
+import { blogPageSchema } from "@/schemas/blogPageSchema";
 
 // GET a single blog page
 export async function GET(
@@ -32,7 +34,11 @@ export async function GET(
       })
       .lean();
 
-    if (!page) {
+    if (
+      !page ||
+      (!userCan(user, PERMISSIONS.PUBLISH_PAGES) &&
+        page?.author?.toString() !== user.id)
+    ) {
       return NextResponse.json(
         { error: "Blog page not found" },
         { status: 404 }
@@ -107,10 +113,26 @@ export async function PATCH(
         { status: 403 }
       );
     }
+    const validation = blogPageSchema.safeParse(body);
 
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors },
+        { status: 400 }
+      );
+    }
+    const payload = validation.data;
+    // Non-admins can only ask to publish -> pending
+    if (!userCan(user, PERMISSIONS.PUBLISH_PAGES)) {
+      payload.status =
+        validation.data.status === "published"
+          ? "pending"
+          : validation.data.status;
+      payload.isActive = pageData.isActive;
+    }
     const updatedPage = await BlogPage.findByIdAndUpdate(
       id,
-      { ...body, updatedBy: user.id },
+      { ...payload, updatedBy: user.id },
       { new: true, runValidators: true }
     ).populate({
       path: "author",

@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
         validation.data.status === "published"
           ? "pending"
           : validation.data.status;
+      payload.isActive = false;
     }
     const newPost = await BlogPost.create({
       ...payload,

@@ -162,7 +162,7 @@ export default function SearchableSelect({
       {/* Trigger */}
       <div
         className={
-          `flex ${sizeClasses.triggerHeight} w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 ${sizeClasses.fontSize} text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600` +
+          `flex ${sizeClasses.triggerHeight} w-full min-w-36 items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 ${sizeClasses.fontSize} text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600` +
           (loading ? " opacity-50 pointer-events-none" : "")
         }
         onClick={() => !loading && setOpen(true)}

@@ -2,12 +2,12 @@ import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPage from "@/models/blogPage.model";
 import "@/models/users.model";
 import { blogPageSchema } from "@/schemas/blogPageSchema";
-import { revalidatePath } from "next/cache";
-import { NextRequest, NextResponse } from "next/server";
 import {
   AuthenticatedorNot,
-  isSuperAdmin,
+  userCan,
 } from "@/services/dbAndPermission.service";
+import { revalidatePath } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const user = await AuthenticatedorNot(request, {
@@ -18,11 +18,10 @@ export async function GET(request: NextRequest) {
 
   try {
     let query: any = {};
-    const superAdmin = isSuperAdmin(user);
 
-    // Non-super admins can only see their own pages
-    if (user && !superAdmin) {
-      query.$or = [{ author: user.id }];
+    // Non admins can only see their own posts
+    if (user && !userCan(user, PERMISSIONS.PUBLISH_PAGES)) {
+      query.author = user.id;
     }
 
     const { searchParams } = new URL(request.url);
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest) {
     if (isFeatured === "true") {
       query.isFeatured = true;
     }
-    if (isActive === "true" || isActive === "false") {
+    if (isActive) {
       query.isActive = isActive === "true";
     }
 
@@ -152,9 +151,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const payload = validation.data;
+    // Non-admins can only ask to publish -> pending
+    if (!userCan(user, PERMISSIONS.PUBLISH_POSTS)) {
+      payload.status =
+        validation.data.status === "published"
+          ? "pending"
+          : validation.data.status;
+      payload.isActive = false;
+    }
 
     const newPage = await BlogPage.create({
-      ...validation.data,
+      ...payload,
       author: user.id,
       authorName: user.name,
       createdBy: user.id,

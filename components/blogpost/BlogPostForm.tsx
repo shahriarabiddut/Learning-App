@@ -47,8 +47,8 @@ import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
   postStatus,
-  postStatusForAuthor,
-  postStatusForAuthorWithRevision,
+  statusForAuthor,
+  statusForAuthorWithRevision,
 } from "@/lib/constants/env";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 
@@ -966,8 +966,8 @@ export function BlogPostForm({
                                 : postId && post && post?.status === "published"
                                 ? postStatus
                                 : postId
-                                ? postStatusForAuthorWithRevision
-                                : postStatusForAuthor
+                                ? statusForAuthorWithRevision
+                                : statusForAuthor
                             }
                             className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
                           />

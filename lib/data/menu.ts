@@ -1,7 +1,18 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
-import { Building, File, FilePlus, Files } from "lucide-react";
-import { FaPlus, FaThLarge, FaUsers } from "react-icons/fa";
-import { FaBuildingFlag } from "react-icons/fa6";
+import { Building, FilePlus } from "lucide-react";
+import {
+  FaFile,
+  FaFileAlt,
+  FaFilePowerpoint,
+  FaPlus,
+  FaThLarge,
+  FaUsers,
+} from "react-icons/fa";
+import {
+  FaBuildingFlag,
+  FaFileMedical,
+  FaRegFilePowerpoint,
+} from "react-icons/fa6";
 
 export const NAV_LINKS = [
   {
@@ -57,20 +68,20 @@ export const NAV_LINKS = [
   },
   {
     name: "Posts",
-    icon: File,
+    icon: FaFile,
     permission: [PERMISSIONS.MANAGE_POSTS, PERMISSIONS.VIEW_POSTS],
     children: [
       {
         id: "posts",
         name: "All Posts",
         href: "/dashboard/posts",
-        icon: Files,
+        icon: FaFileAlt,
         permission: PERMISSIONS.VIEW_POSTS,
       },
       {
         id: "add-post",
         name: "Add New Post",
-        icon: FilePlus,
+        icon: FaFileMedical,
         href: "/dashboard/posts/create",
         permission: PERMISSIONS.MANAGE_POSTS,
         action: true,
@@ -81,14 +92,14 @@ export const NAV_LINKS = [
 
   {
     name: "Pages",
-    icon: File,
+    icon: FaFilePowerpoint,
     permission: [PERMISSIONS.MANAGE_PAGES, PERMISSIONS.VIEW_PAGES],
     children: [
       {
         id: "Pages",
         name: "All Pages",
         href: "/dashboard/pages",
-        icon: Files,
+        icon: FaRegFilePowerpoint,
         permission: PERMISSIONS.VIEW_PAGES,
       },
       {
