@@ -39,29 +39,31 @@ const getValidUserTypesForRole = (role: string, isSuperAdmin: boolean) => {
             { label: "User", value: UserType.USER },
             { label: "Super Admin", value: UserType.SUPER_ADMIN },
             { label: "Editor", value: UserType.EDITOR },
+            { label: "Contributor", value: UserType.CONTRIBUTOR },
+            { label: "Contributor", value: UserType.CONTRIBUTOR },
+            { label: "Moderator", value: UserType.MODERATOR },
+            { label: "Reviewer", value: UserType.REVIEWER },
           ]
         : [
             { label: "User", value: UserType.USER },
+            { label: "Editor", value: UserType.EDITOR },
+            { label: "Contributor", value: UserType.CONTRIBUTOR },
+            { label: "Moderator", value: UserType.MODERATOR },
+            { label: "Reviewer", value: UserType.REVIEWER },
             { label: "Editor", value: UserType.EDITOR },
           ];
 
     case UserRole.AUTHOR:
       return [
-        { label: "Teacher", value: UserType.TEACHER },
-        { label: "Programmer", value: UserType.PROGRAMMER },
-        { label: "Engineer", value: UserType.ENGINEER },
-        { label: "Developer", value: UserType.DEVELOPER },
-        { label: "Designer", value: UserType.DESIGNER },
-        { label: "Data Scientist", value: UserType.DATA_SCIENTIST },
-        { label: "Technical Writer", value: UserType.TECHNICAL_WRITER },
-        { label: "Architect", value: UserType.ARCHITECT },
+        { label: "User", value: UserType.USER },
+        { label: "Contributor", value: UserType.CONTRIBUTOR },
+        { label: "Moderator", value: UserType.MODERATOR },
+        { label: "Reviewer", value: UserType.REVIEWER },
       ];
 
     case UserRole.USER:
       return [
-        { label: "Student", value: UserType.STUDENT },
-        { label: "Commentator", value: UserType.COMMENTATOR },
-        { label: "Reader", value: UserType.READER },
+        { label: "User", value: UserType.USER },
         { label: "Contributor", value: UserType.CONTRIBUTOR },
         { label: "Moderator", value: UserType.MODERATOR },
         { label: "Reviewer", value: UserType.REVIEWER },
@@ -124,6 +126,9 @@ export const UserForm = ({ open, onOpenChange, user }: UserFormProps) => {
       session?.user?.role === "admin" &&
       session?.user?.userType === UserType.SUPER_ADMIN
     );
+  }, [session]);
+  const isAdmin = useMemo(() => {
+    return session?.user?.role === "admin";
   }, [session]);
 
   // Get available userType options based on selected role

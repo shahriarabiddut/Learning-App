@@ -8,7 +8,7 @@ interface BlogPostState {
   searchQuery: string;
   sortBy: string;
   currentPage: number;
-  filterStatus: "all" | "draft" | "published" | "archived";
+  filterStatus: "all" | "draft" | "published" | "revison" | "pending";
   filterAuthor: string | null;
   filterCategory: string | null;
   filterTags: string[];

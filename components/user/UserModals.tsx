@@ -93,14 +93,14 @@ export const UserModal = ({
                           {selectedUser?.email}
                         </span>
                       </p>
-                      <p className="capitalize">
+                      <div className="capitalize">
                         Role: {selectedUser?.role || "No role assigned"}{" "}
                         {selectedUser?.userType && (
                           <Badge variant={"outline"}>
                             Type : {selectedUser?.userType}
                           </Badge>
                         )}
-                      </p>
+                      </div>
                       <p>Joined: {formatDate(selectedUser?.createdAt)}</p>
                       {selectedUser?.addedBy && selectedUser?.userName && (
                         <>

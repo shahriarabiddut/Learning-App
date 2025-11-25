@@ -112,15 +112,10 @@ export async function PATCH(
       id,
       { ...body, updatedBy: user.id },
       { new: true, runValidators: true }
-    )
-      .populate({
-        path: "author",
-        select: "name email",
-      })
-      .populate({
-        path: "categories",
-        select: "name",
-      });
+    ).populate({
+      path: "author",
+      select: "name email",
+    });
 
     if (!updatedPage) {
       return NextResponse.json(

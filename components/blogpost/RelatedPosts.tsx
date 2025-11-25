@@ -54,7 +54,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
             href={`/blog/${relatedPost.slug}`}
             className="group block"
           >
-            <Card className="h-full hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 cursor-pointer overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:translate-y-[-8px] bg-white dark:bg-slate-800/50 backdrop-blur-sm">
+            <Card className="p-0 h-full hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 cursor-pointer overflow-hidden border-2 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:translate-y-[-8px] bg-white dark:bg-slate-800/50 backdrop-blur-sm">
               {/* Image Section */}
               <div className="relative h-56 w-full overflow-hidden bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900">
                 <Image

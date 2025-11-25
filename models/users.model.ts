@@ -2,23 +2,23 @@ import { UserRole, UserType } from "@/lib/middle/roles";
 import mongoose, { Schema, model, Document } from "mongoose";
 
 // Define valid UserType for each UserRole
-type AdminUserTypes = UserType.USER | UserType.EDITOR | UserType.SUPER_ADMIN;
-type AuthorUserTypes =
-  | UserType.TEACHER
-  | UserType.PROGRAMMER
-  | UserType.ENGINEER
-  | UserType.DEVELOPER
-  | UserType.DESIGNER
-  | UserType.DATA_SCIENTIST
-  | UserType.TECHNICAL_WRITER
-  | UserType.ARCHITECT;
-type RegularUserTypes =
-  | UserType.STUDENT
-  | UserType.COMMENTATOR
-  | UserType.READER
+type AdminUserTypes =
+  | UserType.USER
+  | UserType.EDITOR
+  | UserType.SUPER_ADMIN
   | UserType.CONTRIBUTOR
   | UserType.MODERATOR
   | UserType.REVIEWER;
+type AuthorUserTypes =
+  | UserType.CONTRIBUTOR
+  | UserType.MODERATOR
+  | UserType.REVIEWER
+  | UserType.USER;
+type RegularUserTypes =
+  | UserType.CONTRIBUTOR
+  | UserType.MODERATOR
+  | UserType.REVIEWER
+  | UserType.USER;
 type SubscriberUserTypes = UserType.USER;
 
 // Conditional type that enforces userType based on role
@@ -147,23 +147,24 @@ const userSchema = new Schema<IUser>(
 const getValidUserTypesForRole = (role: UserRole): UserType[] => {
   switch (role) {
     case UserRole.ADMIN:
-      return [UserType.USER, UserType.EDITOR, UserType.SUPER_ADMIN];
+      return [
+        UserType.USER,
+        UserType.EDITOR,
+        UserType.SUPER_ADMIN,
+        UserType.CONTRIBUTOR,
+        UserType.MODERATOR,
+        UserType.REVIEWER,
+      ];
     case UserRole.AUTHOR:
       return [
-        UserType.TEACHER,
-        UserType.PROGRAMMER,
-        UserType.ENGINEER,
-        UserType.DEVELOPER,
-        UserType.DESIGNER,
-        UserType.DATA_SCIENTIST,
-        UserType.TECHNICAL_WRITER,
-        UserType.ARCHITECT,
+        UserType.USER,
+        UserType.CONTRIBUTOR,
+        UserType.MODERATOR,
+        UserType.REVIEWER,
       ];
     case UserRole.USER:
       return [
-        UserType.STUDENT,
-        UserType.COMMENTATOR,
-        UserType.READER,
+        UserType.USER,
         UserType.CONTRIBUTOR,
         UserType.MODERATOR,
         UserType.REVIEWER,

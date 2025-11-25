@@ -45,7 +45,12 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { postStatus } from "@/lib/constants/env";
+import {
+  postStatus,
+  postStatusForAuthor,
+  postStatusForAuthorWithRevision,
+} from "@/lib/constants/env";
+import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
 
 interface BlogPostFormProps {
   postId?: string;
@@ -127,6 +132,10 @@ export function BlogPostForm({
     skip: !postId,
   });
 
+  const { data: session } = useSession();
+  const isAdmin = useMemo(() => {
+    return session?.user?.role === "admin";
+  }, [session]);
   // Local state
   const [tagInput, setTagInput] = useState("");
   const [readingTime, setReadingTime] = useState([5]);
@@ -411,97 +420,6 @@ export function BlogPostForm({
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       Basic Information
                     </h3>
-                  </div>
-                  {/* Status Toggles */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormControl>
-                            <SearchableSelect
-                              value={field.value || ""}
-                              onValueChange={field.onChange}
-                              placeholder="Select Status"
-                              options={postStatus}
-                              className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="isActive"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4">
-                            <div className="flex items-center gap-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                                Visible
-                              </FormLabel>
-                            </div>
-                          </div>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="isFeatured"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-4">
-                            <div className="flex items-center gap-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-yellow-700 dark:text-yellow-300 cursor-pointer">
-                                Featured Post
-                              </FormLabel>
-                            </div>
-                          </div>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="allowComments"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4">
-                            <div className="flex items-center gap-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-medium text-blue-700 dark:text-blue-300 cursor-pointer">
-                                Allow Comments
-                              </FormLabel>
-                            </div>
-                          </div>
-                          <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
-                        </FormItem>
-                      )}
-                    />
                   </div>
                 </div>
 
@@ -1025,43 +943,151 @@ export function BlogPostForm({
               )}
 
               {/* Form Actions */}
-              <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 rounded-b-xl shadow-lg">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 w-full sm:w-auto"
-                  disabled={form.formState.isSubmitting}
+              <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-end items-end gap-3 rounded-b-xl shadow-lg">
+                {/* Status Toggles */}
+                <div
+                  className={`grid grid-cols-2 ${
+                    isAdmin ? `lg:grid-cols-4` : `lg:grid-cols-2`
+                  } gap-4`}
                 >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={form.formState.isSubmitting}
-                  className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
-                >
-                  {form.formState.isSubmitting ? (
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            placeholder="Select Status"
+                            options={
+                              isAdmin
+                                ? postStatus
+                                : postId && post && post?.status === "published"
+                                ? postStatus
+                                : postId
+                                ? postStatusForAuthorWithRevision
+                                : postStatusForAuthor
+                            }
+                            className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                      </FormItem>
+                    )}
+                  />
+                  {isAdmin && (
                     <>
-                      <Loader2 className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" />
-                      {postId ? "Updating Post..." : "Creating Post..."}
-                    </>
-                  ) : (
-                    <>
-                      {postId ? (
-                        <>
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Update Post
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Post
-                        </>
-                      )}
+                      <FormField
+                        control={form.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4">
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Visible
+                                </FormLabel>
+                              </div>
+                            </div>
+                            <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="isFeatured"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 px-4">
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium text-yellow-700 dark:text-yellow-300 cursor-pointer">
+                                  Featured Post
+                                </FormLabel>
+                              </div>
+                            </div>
+                            <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                          </FormItem>
+                        )}
+                      />{" "}
                     </>
                   )}
-                </Button>
+                  <FormField
+                    control={form.control}
+                    name="allowComments"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <div className="h-10 sm:h-12 flex items-center justify-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4">
+                          <div className="flex items-center gap-3">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium text-blue-700 dark:text-blue-300 cursor-pointer">
+                              Allow Comments
+                            </FormLabel>
+                          </div>
+                        </div>
+                        <FormMessage className="text-xs text-red-600 dark:text-red-400 font-medium" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div>
+                  <Button
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                    className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
+                  >
+                    {form.formState.isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" />
+                        {postId ? "Updating Post..." : "Creating Post..."}
+                      </>
+                    ) : (
+                      <>
+                        {postId ? (
+                          <>
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Update Post
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Post
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 w-full sm:w-auto"
+                    disabled={form.formState.isSubmitting}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

@@ -1,6 +1,7 @@
 import {
   AuthenticatedorNot,
   isSuperAdmin,
+  userCan,
 } from "@/services/dbAndPermission.service";
 import { PERMISSIONS } from "@/lib/middle/permissions";
 import BlogPost from "@/models/blogPost.model";
@@ -9,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import "@/models/users.model";
 import "@/models/categories.model";
+import { blogPostSchema } from "@/schemas/blogPostSchema";
 
 // GET a single blog post
 export async function GET(
@@ -36,7 +38,7 @@ export async function GET(
       })
       .lean();
 
-    if (!post) {
+    if (!post || post?.author?.toString() !== user.id) {
       return NextResponse.json(
         { error: "Blog post not found" },
         { status: 404 }
@@ -112,9 +114,12 @@ export async function PATCH(
 
     // Check if user owns the post or is super admin
     const superAdmin = isSuperAdmin(user);
-    if (!superAdmin && postData.author?.toString() !== user.id) {
+    if (
+      !userCan(user, PERMISSIONS.PUBLISH_POSTS) &&
+      postData.author?.toString() !== user.id
+    ) {
       return NextResponse.json(
-        { error: "You don't have permission to edit this post" },
+        { error: "You don't have permission to edit this post!" },
         { status: 403 }
       );
     }
@@ -126,10 +131,25 @@ export async function PATCH(
         { status: 403 }
       );
     }
+    const validation = blogPostSchema.safeParse(body);
 
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors },
+        { status: 400 }
+      );
+    }
+    const payload = validation.data;
+    // Non-admins can only ask to publish -> pending
+    if (!userCan(user, PERMISSIONS.PUBLISH_POSTS)) {
+      payload.status =
+        validation.data.status === "published"
+          ? "pending"
+          : validation.data.status;
+    }
     const updatedPost = await BlogPost.findByIdAndUpdate(
       id,
-      { ...body, updatedBy: user.id },
+      { ...payload, updatedBy: user.id },
       { new: true, runValidators: true }
     )
       .populate({

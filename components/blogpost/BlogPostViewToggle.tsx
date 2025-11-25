@@ -144,7 +144,12 @@ export const BlogPostViewToggle = ({
                 onValueChange={(value) =>
                   dispatch(
                     setFilterStatus(
-                      value as "all" | "draft" | "published" | "archived"
+                      value as
+                        | "all"
+                        | "draft"
+                        | "published"
+                        | "pending"
+                        | "revision"
                     )
                   )
                 }
@@ -156,7 +161,8 @@ export const BlogPostViewToggle = ({
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="revision">Revision</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </div>
