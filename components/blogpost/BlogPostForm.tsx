@@ -464,7 +464,7 @@ export function BlogPostForm({
                           <div className="h-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
                             <RichTextEditor
                               value={field.value || ""}
-                              className="w-full"
+                              className="w-[84vw]"
                               onChange={handleContentChange}
                             />
                           </div>
@@ -1050,7 +1050,7 @@ export function BlogPostForm({
                     )}
                   />
                 </div>
-                <div>
+                <div className="flex flex-wrap gap-1">
                   <Button
                     type="submit"
                     disabled={form.formState.isSubmitting}

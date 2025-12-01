@@ -8,7 +8,9 @@ import {
   AlignRight,
   Bold,
   Check,
+  Code2,
   Columns,
+  Copy,
   Highlighter,
   Image as ImageIcon,
   Italic,
@@ -54,6 +56,7 @@ export const RichTextEditor = ({
   const [showImageModal, setShowImageModal] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkText, setLinkText] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -70,6 +73,8 @@ export const RichTextEditor = ({
   const [tableHasHeader, setTableHasHeader] = useState(true);
   const [tableHeaderColor, setTableHeaderColor] = useState("#f3f4f6");
   const [columnCount, setColumnCount] = useState(2);
+  const [codeLanguage, setCodeLanguage] = useState("javascript");
+  const [codeContent, setCodeContent] = useState("");
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(
     null
   );
@@ -86,12 +91,333 @@ export const RichTextEditor = ({
   const imageModalRef = useRef<HTMLDivElement>(null);
   const tableModalRef = useRef<HTMLDivElement>(null);
   const columnModalRef = useRef<HTMLDivElement>(null);
+  const codeModalRef = useRef<HTMLDivElement>(null);
   const savedSelectionRef = useRef<Range | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Simple syntax highlighter
+  const highlightCode = (code: string, language: string): string => {
+    const escapeHtml = (text: string) =>
+      text.replace(/[&<>'"]/g, (char) => {
+        const escapeMap: { [key: string]: string } = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "'": "&#39;",
+          '"': "&quot;",
+        };
+        return escapeMap[char];
+      });
+
+    let highlighted = escapeHtml(code);
+
+    // Language-specific highlighting
+    switch (language.toLowerCase()) {
+      case "javascript":
+      case "typescript":
+      case "jsx":
+      case "tsx":
+        // Keywords
+        highlighted = highlighted.replace(
+          /\b(const|let|var|function|class|if|else|for|while|return|import|export|from|async|await|try|catch|new|this|super|extends|implements|interface|type|enum)\b/g,
+          '<span class="token-keyword">$1</span>'
+        );
+        // Strings
+        highlighted = highlighted.replace(
+          /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+          '<span class="token-string">$&</span>'
+        );
+        // Comments
+        highlighted = highlighted.replace(
+          /\/\/.*/g,
+          '<span class="token-comment">$&</span>'
+        );
+        highlighted = highlighted.replace(
+          /\/\*[\s\S]*?\*\//g,
+          '<span class="token-comment">$&</span>'
+        );
+        // Numbers
+        highlighted = highlighted.replace(
+          /\b\d+\.?\d*\b/g,
+          '<span class="token-number">$&</span>'
+        );
+        // Functions
+        highlighted = highlighted.replace(
+          /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g,
+          '<span class="token-function">$1</span>('
+        );
+        break;
+
+      case "python":
+        // Keywords
+        highlighted = highlighted.replace(
+          /\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|with|lambda|pass|break|continue|and|or|not|in|is|None|True|False|finally|raise|assert|global|nonlocal|del|yield)\b/g,
+          '<span class="token-keyword">$1</span>'
+        );
+        // Strings
+        highlighted = highlighted.replace(
+          /(["'])(?:(?=(\\?))\2.)*?\1/g,
+          '<span class="token-string">$&</span>'
+        );
+        // Comments
+        highlighted = highlighted.replace(
+          /#.*/g,
+          '<span class="token-comment">$&</span>'
+        );
+        // Numbers
+        highlighted = highlighted.replace(
+          /\b\d+\.?\d*\b/g,
+          '<span class="token-number">$&</span>'
+        );
+        // Function definitions
+        highlighted = highlighted.replace(
+          /\bdef\s+([a-zA-Z_][a-zA-Z0-9_]*)/g,
+          'def <span class="token-function">$1</span>'
+        );
+        break;
+
+      case "java":
+      case "c":
+      case "cpp":
+      case "csharp":
+        // Keywords
+        highlighted = highlighted.replace(
+          /\b(public|private|protected|class|void|int|String|boolean|if|else|for|while|return|new|static|final|abstract|interface|extends|implements|try|catch|throw|throws|float|double|char|long|short|byte)\b/g,
+          '<span class="token-keyword">$1</span>'
+        );
+        // Strings
+        highlighted = highlighted.replace(
+          /(["'])(?:(?=(\\?))\2.)*?\1/g,
+          '<span class="token-string">$&</span>'
+        );
+        // Comments
+        highlighted = highlighted.replace(
+          /\/\/.*/g,
+          '<span class="token-comment">$&</span>'
+        );
+        highlighted = highlighted.replace(
+          /\/\*[\s\S]*?\*\//g,
+          '<span class="token-comment">$&</span>'
+        );
+        // Numbers
+        highlighted = highlighted.replace(
+          /\b\d+\.?\d*\b/g,
+          '<span class="token-number">$&</span>'
+        );
+        break;
+
+      case "html":
+      case "xml":
+        // Tags
+        highlighted = highlighted.replace(
+          /&lt;\/?\w+(?:\s+[\w-]+(?:=(?:"[^"]*"|'[^']*'))?)*\s*\/?&gt;/g,
+          '<span class="token-tag">$&</span>'
+        );
+        // Attributes
+        highlighted = highlighted.replace(
+          /\s([\w-]+)=/g,
+          ' <span class="token-attr">$1</span>='
+        );
+        // Attribute values
+        highlighted = highlighted.replace(
+          /=(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,
+          '=<span class="token-string">$1</span>'
+        );
+        break;
+
+      case "css":
+      case "scss":
+        // Selectors
+        highlighted = highlighted.replace(
+          /^([.#]?[a-zA-Z][a-zA-Z0-9-_]*)\s*\{/gm,
+          '<span class="token-selector">$1</span> {'
+        );
+        // Properties
+        highlighted = highlighted.replace(
+          /\b([a-z-]+)\s*:/g,
+          '<span class="token-property">$1</span>:'
+        );
+        // Values
+        highlighted = highlighted.replace(
+          /:\s*([^;]+);/g,
+          ': <span class="token-value">$1</span>;'
+        );
+        // Comments
+        highlighted = highlighted.replace(
+          /\/\*[\s\S]*?\*\//g,
+          '<span class="token-comment">$&</span>'
+        );
+        break;
+
+      case "sql":
+        // Keywords
+        highlighted = highlighted.replace(
+          /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|TABLE|DATABASE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|NULL|PRIMARY|KEY|FOREIGN|INDEX|ALTER|ADD|COLUMN)\b/gi,
+          '<span class="token-keyword">$&</span>'
+        );
+        // Strings
+        highlighted = highlighted.replace(
+          /(["'])(?:(?=(\\?))\2.)*?\1/g,
+          '<span class="token-string">$&</span>'
+        );
+        // Comments
+        highlighted = highlighted.replace(
+          /--.*/g,
+          '<span class="token-comment">$&</span>'
+        );
+        break;
+
+      case "json":
+        // Keys
+        highlighted = highlighted.replace(
+          /&quot;([^&]+)&quot;\s*:/g,
+          '<span class="token-property">&quot;$1&quot;</span>:'
+        );
+        // Strings
+        highlighted = highlighted.replace(
+          /:\s*&quot;([^&]*)&quot;/g,
+          ': <span class="token-string">&quot;$1&quot;</span>'
+        );
+        // Numbers
+        highlighted = highlighted.replace(
+          /:\s*(\d+\.?\d*)/g,
+          ': <span class="token-number">$1</span>'
+        );
+        // Booleans
+        highlighted = highlighted.replace(
+          /\b(true|false|null)\b/g,
+          '<span class="token-boolean">$1</span>'
+        );
+        break;
+    }
+
+    return highlighted;
+  };
+
+  // Syntax highlighting function
+
+  const applySyntaxHighlighting = () => {
+    if (!editorRef.current) return;
+
+    const preBlocks = editorRef.current.querySelectorAll(
+      "pre:not(.code-highlighted)"
+    );
+
+    preBlocks.forEach((pre) => {
+      const code = pre.querySelector("code");
+      if (code && !pre.classList.contains("code-highlighted")) {
+        // Mark as processed IMMEDIATELY
+        pre.classList.add("code-highlighted", "code-enhanced");
+
+        const language = code.getAttribute("data-language") || "plaintext";
+        const text = code.textContent || "";
+
+        // Store original
+        pre.setAttribute("data-raw-code", text);
+        pre.setAttribute("data-language", language);
+
+        // Add toolbar if not exists
+        if (!pre.querySelector(".code-toolbar")) {
+          const toolbar = document.createElement("div");
+          toolbar.className = "code-toolbar";
+          toolbar.setAttribute("contenteditable", "false");
+
+          const langLabel = document.createElement("span");
+          langLabel.className = "code-language-label";
+          langLabel.textContent = language.toUpperCase();
+
+          const actions = document.createElement("div");
+          actions.className = "code-actions";
+
+          // Copy button
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "code-action-btn code-copy-btn";
+          copyBtn.setAttribute("type", "button");
+          copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+          copyBtn.title = "Copy code";
+          copyBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const codeElement = pre.querySelector("code");
+            const rawCode = codeElement?.textContent || text;
+            navigator.clipboard
+              .writeText(rawCode)
+              .then(() => {
+                toast.success("Code copied!");
+                copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+                setTimeout(() => {
+                  copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+                }, 2000);
+              })
+              .catch((err) => {
+                console.error("Copy failed:", err);
+                toast.error("Failed to copy");
+              });
+          };
+
+          actions.appendChild(copyBtn);
+          toolbar.appendChild(langLabel);
+          toolbar.appendChild(actions);
+          pre.insertBefore(toolbar, pre.firstChild);
+        }
+
+        // Create container with line numbers - but keep code as plain text
+        if (!pre.querySelector(".code-container")) {
+          const container = document.createElement("div");
+          container.className = "code-container";
+
+          // Create line numbers wrapper
+          const wrapper = document.createElement("div");
+          wrapper.className = "line-numbers-wrapper";
+          wrapper.setAttribute("contenteditable", "false");
+
+          const lines = text.trimEnd().split("\n");
+          const lineNumbers = lines.map((_, i) => i + 1).join("\n");
+          const lineNumbersDiv = document.createElement("div");
+          lineNumbersDiv.className = "line-numbers";
+          lineNumbersDiv.textContent = lineNumbers;
+          lineNumbersDiv.setAttribute("contenteditable", "false");
+
+          wrapper.appendChild(lineNumbersDiv);
+
+          // Remove code from pre
+          const codeElement = pre.querySelector("code");
+          if (codeElement && codeElement.parentNode === pre) {
+            pre.removeChild(codeElement);
+          }
+
+          // Keep code as plain text - NO highlighting
+          if (codeElement) {
+            codeElement.textContent = text; // Plain text only
+            codeElement.setAttribute("contenteditable", "true"); // Make it editable
+
+            // Update line numbers when editing
+            codeElement.addEventListener("input", () => {
+              const newText = codeElement.textContent || "";
+              const newLines = newText.trimEnd().split("\n");
+              const newLineNumbers = newLines.map((_, i) => i + 1).join("\n");
+              lineNumbersDiv.textContent = newLineNumbers;
+              pre.setAttribute("data-raw-code", newText);
+            });
+          }
+
+          // Build structure: container > [wrapper, code]
+          container.appendChild(wrapper);
+          if (codeElement) {
+            container.appendChild(codeElement);
+          }
+          pre.appendChild(container);
+        }
+      }
+    });
+  };
+
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value)
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
       editorRef.current.innerHTML = value;
+      // Apply syntax highlighting to existing code blocks
+      applySyntaxHighlighting();
+    }
   }, [value]);
 
   useEffect(() => {
@@ -185,6 +511,16 @@ export const RichTextEditor = ({
     setActiveFormats(formats);
   }, []);
 
+  // Update content change handler to apply syntax highlighting
+  const handleContentChange = useCallback(() => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+      updateFormatState();
+      // Apply syntax highlighting with a small delay to allow DOM updates
+      setTimeout(() => applySyntaxHighlighting(), 10);
+    }
+  }, [onChange, updateFormatState]);
+
   // Update format state on selection change
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -197,13 +533,6 @@ export const RichTextEditor = ({
     return () =>
       document.removeEventListener("selectionchange", handleSelectionChange);
   }, [updateFormatState]);
-
-  const handleContentChange = useCallback(() => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-      updateFormatState();
-    }
-  }, [onChange, updateFormatState]);
 
   const saveSelection = () => {
     const sel = window.getSelection();
@@ -289,6 +618,8 @@ export const RichTextEditor = ({
         "th",
         "thead",
         "tbody",
+        "pre",
+        "code",
       ];
       div.querySelectorAll("*").forEach((el) => {
         if (!allowed.includes(el.tagName.toLowerCase())) {
@@ -334,10 +665,22 @@ export const RichTextEditor = ({
         !columnModalRef.current.contains(t)
       )
         closeColumnModal();
+      if (
+        showCodeModal &&
+        codeModalRef.current &&
+        !codeModalRef.current.contains(t)
+      )
+        closeCodeModal();
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showLinkModal, showImageModal, showTableModal, showColumnModal]);
+  }, [
+    showLinkModal,
+    showImageModal,
+    showTableModal,
+    showColumnModal,
+    showCodeModal,
+  ]);
 
   const openLinkModal = () => {
     saveSelection();
@@ -527,6 +870,43 @@ export const RichTextEditor = ({
     editorRef.current?.focus();
   };
 
+  const openCodeModal = () => {
+    saveSelection();
+    setCodeLanguage("javascript");
+    setCodeContent("");
+    setShowCodeModal(true);
+  };
+
+  const insertCodeBlock = () => {
+    if (!codeContent.trim()) return;
+    restoreSelection();
+    editorRef.current?.focus();
+
+    const escapedCode = codeContent
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+    const html = `<pre class="code-block-wrapper" data-language="${codeLanguage}"><code data-language="${codeLanguage}">${escapedCode}</code></pre><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+
+    // Apply syntax highlighting after insertion
+    setTimeout(() => {
+      handleContentChange();
+      applySyntaxHighlighting();
+    }, 10);
+
+    closeCodeModal();
+  };
+
+  const closeCodeModal = () => {
+    setShowCodeModal(false);
+    setCodeContent("");
+    editorRef.current?.focus();
+  };
+
   const handleDoubleClick = (e: React.MouseEvent) => {
     const t = e.target as HTMLElement;
     if (t.tagName === "A") {
@@ -595,6 +975,33 @@ export const RichTextEditor = ({
     { n: "Purple", v: "#e9d5ff" },
     { n: "None", v: "transparent" },
   ];
+
+  const codeLanguages = [
+    { value: "javascript", label: "JavaScript" },
+    { value: "typescript", label: "TypeScript" },
+    { value: "python", label: "Python" },
+    { value: "java", label: "Java" },
+    { value: "c", label: "C" },
+    { value: "cpp", label: "C++" },
+    { value: "csharp", label: "C#" },
+    { value: "php", label: "PHP" },
+    { value: "ruby", label: "Ruby" },
+    { value: "go", label: "Go" },
+    { value: "rust", label: "Rust" },
+    { value: "swift", label: "Swift" },
+    { value: "kotlin", label: "Kotlin" },
+    { value: "html", label: "HTML" },
+    { value: "css", label: "CSS" },
+    { value: "scss", label: "SCSS" },
+    { value: "sql", label: "SQL" },
+    { value: "json", label: "JSON" },
+    { value: "xml", label: "XML" },
+    { value: "yaml", label: "YAML" },
+    { value: "bash", label: "Bash" },
+    { value: "powershell", label: "PowerShell" },
+    { value: "plaintext", label: "Plain Text" },
+  ];
+
   const btns = [
     { c: "bold", i: Bold, t: "Bold" },
     { c: "italic", i: Italic, t: "Italic" },
@@ -624,7 +1031,6 @@ export const RichTextEditor = ({
             <option value="h2">Heading 2</option>
             <option value="h3">Heading 3</option>
             <option value="blockquote">Quote</option>
-            <option value="pre">Code</option>
           </select>
           <select
             className="px-3 py-2 text-sm font-medium border-2 rounded-lg mr-2 bg-white dark:bg-gray-800"
@@ -726,6 +1132,16 @@ export const RichTextEditor = ({
             )}
           </div>
           <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openCodeModal}
+            title="Code Block"
+            className="h-9 w-9 p-0"
+          >
+            <Code2 className="h-4 w-4" />
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -1320,6 +1736,80 @@ export const RichTextEditor = ({
                   <Button
                     type="button"
                     onClick={insertColumns}
+                    className="bg-blue-600"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Insert
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showCodeModal && (
+            <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
+              <div
+                ref={codeModalRef}
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold flex items-center gap-2">
+                    <Code2 className="h-6 w-6" />
+                    Insert Code Block
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={closeCodeModal}
+                    className="h-10 w-10 p-0 rounded-full"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Language
+                    </label>
+                    <select
+                      value={codeLanguage}
+                      onChange={(e) => setCodeLanguage(e.target.value)}
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                    >
+                      {codeLanguages.map((lang) => (
+                        <option key={lang.value} value={lang.value}>
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Code
+                    </label>
+                    <textarea
+                      value={codeContent}
+                      onChange={(e) => setCodeContent(e.target.value)}
+                      placeholder="Enter your code here..."
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 font-mono text-sm"
+                      rows={12}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end mt-8 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={closeCodeModal}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={insertCodeBlock}
+                    disabled={!codeContent.trim()}
                     className="bg-blue-600"
                   >
                     <Check className="h-4 w-4 mr-2" />

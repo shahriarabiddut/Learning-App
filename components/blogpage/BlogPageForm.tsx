@@ -927,42 +927,44 @@ export function BlogPageForm({
                     </>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 w-full sm:w-auto"
-                  disabled={form.formState.isSubmitting}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={form.formState.isSubmitting}
-                  className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
-                >
-                  {form.formState.isSubmitting ? (
-                    <>
-                      <Loader2 className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" />
-                      {pageId ? "Updating Page..." : "Creating Page..."}
-                    </>
-                  ) : (
-                    <>
-                      {pageId ? (
-                        <>
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Update Page
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Page
-                        </>
-                      )}
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-1 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    className="px-6 py-2 h-11 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 w-full sm:w-auto"
+                    disabled={form.formState.isSubmitting}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                    className="px-8 py-2 h-11 bg-gradient-to-r from-gray-500 to-teal-600 hover:from-gray-600 hover:to-teal-700 dark:from-gray-600 dark:to-teal-700 dark:hover:from-gray-700 dark:hover:to-teal-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
+                  >
+                    {form.formState.isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" />
+                        {pageId ? "Updating Page..." : "Creating Page..."}
+                      </>
+                    ) : (
+                      <>
+                        {pageId ? (
+                          <>
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Update Page
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Page
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
