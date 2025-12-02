@@ -1,0 +1,1628 @@
+import { Button } from "@/components/ui/button";
+import { getRichTextStyles } from "@/lib/design/richTextStyles";
+import { uploadImageInIMGBB } from "@/lib/helper/serverHelperFunc";
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Check,
+  Code2,
+  Columns,
+  Eye,
+  EyeOff,
+  Highlighter,
+  Image as ImageIcon,
+  Italic,
+  Link,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+  Minus,
+  Plus,
+  Redo,
+  Strikethrough,
+  Table,
+  Type,
+  Underline,
+  Undo,
+  Upload,
+  X,
+} from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
+interface RichTextEditorProProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  minHeight?: string;
+  className?: string;
+  enableImageUpload?: boolean;
+}
+
+// FIXED: Proper highlighting that renders as HTML
+const highlightCode = (code: string, language: string): string => {
+  // Step 1: Escape HTML entities
+  let html = code
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+  const lang = language.toLowerCase();
+
+  // Step 2: Apply highlighting based on language
+  if (lang === "c" || lang === "cpp" || lang === "csharp") {
+    html = html
+      .replace(
+        /\b(int|float|double|char|void|return|if|else|for|while|do|switch|case|break|continue|default|include|define|ifdef|ifndef|endif|main|printf|scanf|struct|typedef|sizeof|static|const|unsigned|signed|long|short)\b/g,
+        '<span class="token-keyword">$1</span>'
+      )
+      .replace(
+        /(&#39;[^&]*?&#39;|&quot;[^&]*?&quot;)/g,
+        '<span class="token-string">$1</span>'
+      )
+      .replace(/\/\/.*/g, '<span class="token-comment">$&</span>')
+      .replace(/\/\*[\s\S]*?\*\//g, '<span class="token-comment">$&</span>')
+      .replace(/\b(\d+\.?\d*)\b/g, '<span class="token-number">$1</span>')
+      .replace(
+        /\b([a-zA-Z_]\w*)\s*(?=\()/g,
+        '<span class="token-function">$1</span>'
+      )
+      .replace(/([(){}[\]])/g, '<span class="token-bracket">$1</span>')
+      .replace(
+        /([;,=+\-*\/%<>!&|])/g,
+        '<span class="token-punctuation">$1</span>'
+      );
+  } else if (
+    lang === "javascript" ||
+    lang === "typescript" ||
+    lang === "jsx" ||
+    lang === "tsx"
+  ) {
+    html = html
+      .replace(
+        /\b(const|let|var|function|class|if|else|for|while|do|switch|case|break|continue|default|return|import|export|from|async|await|try|catch|finally|throw|new|this|super|extends|implements|interface|type|enum|null|undefined|typeof|instanceof|void|delete|yield|static|get|set|constructor)\b/g,
+        '<span class="token-keyword">$1</span>'
+      )
+      .replace(
+        /(&#39;[^&]*?&#39;|&quot;[^&]*?&quot;|`[^`]*`)/g,
+        '<span class="token-string">$1</span>'
+      )
+      .replace(/\/\/.*/g, '<span class="token-comment">$&</span>')
+      .replace(/\/\*[\s\S]*?\*\//g, '<span class="token-comment">$&</span>')
+      .replace(/\b(\d+\.?\d*)\b/g, '<span class="token-number">$1</span>')
+      .replace(
+        /\b([a-zA-Z_$][\w$]*)\s*(?=\()/g,
+        '<span class="token-function">$1</span>'
+      )
+      .replace(/\b(true|false)\b/g, '<span class="token-boolean">$1</span>')
+      .replace(/([(){}[\]])/g, '<span class="token-bracket">$1</span>')
+      .replace(/([;,.:?])/g, '<span class="token-punctuation">$1</span>');
+  } else if (lang === "python") {
+    html = html
+      .replace(
+        /\b(def|class|if|elif|else|for|while|do|break|continue|return|import|from|as|try|except|finally|raise|with|lambda|pass|yield|assert|global|nonlocal|del|and|or|not|in|is|None|True|False|async|await)\b/g,
+        '<span class="token-keyword">$1</span>'
+      )
+      .replace(
+        /(&#39;[^&]*?&#39;|&quot;[^&]*?&quot;)/g,
+        '<span class="token-string">$1</span>'
+      )
+      .replace(/#.*/g, '<span class="token-comment">$&</span>')
+      .replace(/\b(\d+\.?\d*)\b/g, '<span class="token-number">$1</span>')
+      .replace(
+        /\bdef\s+([a-zA-Z_]\w*)/g,
+        'def <span class="token-function">$1</span>'
+      )
+      .replace(
+        /\b(True|False|None)\b/g,
+        '<span class="token-boolean">$1</span>'
+      )
+      .replace(/([(){}[\]])/g, '<span class="token-bracket">$1</span>')
+      .replace(/([;,:.])/g, '<span class="token-punctuation">$1</span>');
+  } else if (lang === "java") {
+    html = html
+      .replace(
+        /\b(public|private|protected|class|interface|extends|implements|void|int|String|boolean|float|double|char|long|short|byte|if|else|for|while|do|switch|case|break|continue|default|return|new|this|super|static|final|abstract|try|catch|finally|throw|throws|import|package)\b/g,
+        '<span class="token-keyword">$1</span>'
+      )
+      .replace(
+        /(&#39;[^&]*?&#39;|&quot;[^&]*?&quot;)/g,
+        '<span class="token-string">$1</span>'
+      )
+      .replace(/\/\/.*/g, '<span class="token-comment">$&</span>')
+      .replace(/\/\*[\s\S]*?\*\//g, '<span class="token-comment">$&</span>')
+      .replace(/\b(\d+\.?\d*)\b/g, '<span class="token-number">$1</span>')
+      .replace(
+        /\b([a-zA-Z_]\w*)\s*(?=\()/g,
+        '<span class="token-function">$1</span>'
+      )
+      .replace(
+        /\b(true|false|null)\b/g,
+        '<span class="token-boolean">$1</span>'
+      )
+      .replace(/([(){}[\]])/g, '<span class="token-bracket">$1</span>')
+      .replace(/([;,.])/g, '<span class="token-punctuation">$1</span>');
+  }
+
+  return html;
+};
+
+export const RichTextEditor = ({
+  value,
+  onChange,
+  placeholder = "Start writing...",
+  minHeight = "500px",
+  className = "",
+  enableImageUpload = true,
+}: RichTextEditorProProps) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageAlt, setImageAlt] = useState("");
+  const [imageWidth, setImageWidth] = useState("100");
+  const [imageHeight, setImageHeight] = useState("");
+  const [imageInputType, setImageInputType] = useState<"url" | "upload">("url");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadedImagePreview, setUploadedImagePreview] = useState<
+    string | null
+  >(null);
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
+  const [tableHasHeader, setTableHasHeader] = useState(true);
+  const [tableHeaderColor, setTableHeaderColor] = useState("#f3f4f6");
+  const [columnCount, setColumnCount] = useState(2);
+  const [codeLanguage, setCodeLanguage] = useState("javascript");
+  const [codeContent, setCodeContent] = useState("");
+  const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(
+    null
+  );
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [currentFormat, setCurrentFormat] = useState("p");
+  const [currentFontSize, setCurrentFontSize] = useState("3");
+  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
+
+  const editorRef = useRef<HTMLDivElement>(null);
+  const linkModalRef = useRef<HTMLDivElement>(null);
+  const imageModalRef = useRef<HTMLDivElement>(null);
+  const tableModalRef = useRef<HTMLDivElement>(null);
+  const columnModalRef = useRef<HTMLDivElement>(null);
+  const codeModalRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // CRITICAL FIX: Apply highlighting correctly
+  const applySyntaxHighlighting = () => {
+    if (!editorRef.current) return;
+
+    const preBlocks = editorRef.current.querySelectorAll(
+      "pre:not(.code-highlighted)"
+    );
+
+    preBlocks.forEach((pre) => {
+      const code = pre.querySelector("code");
+      if (code && !pre.classList.contains("code-highlighted")) {
+        pre.classList.add("code-highlighted", "code-enhanced");
+
+        const language = code.getAttribute("data-language") || "plaintext";
+        const text = code.textContent || "";
+
+        // Store original
+        pre.setAttribute("data-raw-code", text);
+        pre.setAttribute("data-language", language);
+
+        // Add toolbar
+        if (!pre.querySelector(".code-toolbar")) {
+          const toolbar = document.createElement("div");
+          toolbar.className = "code-toolbar";
+          toolbar.setAttribute("contenteditable", "false");
+
+          const langLabel = document.createElement("span");
+          langLabel.className = "code-language-label";
+          langLabel.textContent = language.toUpperCase();
+
+          const actions = document.createElement("div");
+          actions.className = "code-actions";
+
+          // Raw toggle button
+          const rawBtn = document.createElement("button");
+          rawBtn.className = "code-action-btn code-raw-btn";
+          rawBtn.setAttribute("type", "button");
+          rawBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+          rawBtn.title = "Toggle raw view";
+          rawBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const isRaw = pre.classList.toggle("show-raw");
+            rawBtn.innerHTML = isRaw
+              ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`
+              : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+          };
+
+          // Copy button
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "code-action-btn code-copy-btn";
+          copyBtn.setAttribute("type", "button");
+          copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+          copyBtn.title = "Copy code";
+          copyBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const rawCode = pre.getAttribute("data-raw-code") || text;
+            navigator.clipboard
+              .writeText(rawCode)
+              .then(() => {
+                toast.success("Code copied!");
+                copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+                setTimeout(() => {
+                  copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+                }, 2000);
+              })
+              .catch(() => toast.error("Failed to copy"));
+          };
+
+          actions.appendChild(rawBtn);
+          actions.appendChild(copyBtn);
+          toolbar.appendChild(langLabel);
+          toolbar.appendChild(actions);
+          pre.insertBefore(toolbar, pre.firstChild);
+        }
+
+        // CRITICAL: Build the structure correctly
+        if (!pre.querySelector(".code-container")) {
+          const container = document.createElement("div");
+          container.className = "code-container";
+
+          // Line numbers
+          const wrapper = document.createElement("div");
+          wrapper.className = "line-numbers-wrapper";
+          wrapper.setAttribute("contenteditable", "false");
+
+          const lines = text.trimEnd().split("\n");
+          const lineNumbers = lines.map((_, i) => i + 1).join("\n");
+          const lineNumbersDiv = document.createElement("div");
+          lineNumbersDiv.className = "line-numbers";
+          lineNumbersDiv.textContent = lineNumbers;
+          lineNumbersDiv.setAttribute("contenteditable", "false");
+
+          wrapper.appendChild(lineNumbersDiv);
+
+          // Highlighted code - THE FIX
+          const highlighted = highlightCode(text, language);
+
+          // Remove old code element
+          if (code.parentNode === pre) {
+            pre.removeChild(code);
+          }
+
+          // Create new code element with highlighted HTML
+          const newCode = document.createElement("code");
+          newCode.setAttribute("data-language", language);
+          newCode.setAttribute("contenteditable", "false"); // CRITICAL: Prevents escaping
+
+          // Set innerHTML (this renders the HTML)
+          newCode.innerHTML = highlighted;
+
+          // Build structure
+          container.appendChild(wrapper);
+          container.appendChild(newCode);
+          pre.appendChild(container);
+        }
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
+      applySyntaxHighlighting();
+    }
+  }, [value]);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      const clone = editorRef.current.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("img, table").forEach((el) => el.remove());
+      const text = (clone.textContent || "").trim();
+      setCharCount(text.length);
+      setWordCount(text ? text.split(/\s+/).filter((w) => w).length : 0);
+    }
+  }, [value]);
+
+  const updateFormatState = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    let node: Node | null = range.startContainer;
+
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    if (
+      !node ||
+      !(node instanceof HTMLElement) ||
+      !editorRef.current?.contains(node)
+    )
+      return;
+
+    let blockElement = node as HTMLElement;
+    while (blockElement && blockElement !== editorRef.current) {
+      const tagName = blockElement.tagName.toLowerCase();
+      if (["h1", "h2", "h3", "p", "blockquote", "pre"].includes(tagName)) {
+        setCurrentFormat(tagName);
+        break;
+      }
+      blockElement = blockElement.parentElement as HTMLElement;
+    }
+
+    const formats = new Set<string>();
+    if (document.queryCommandState("bold")) formats.add("bold");
+    if (document.queryCommandState("italic")) formats.add("italic");
+    if (document.queryCommandState("underline")) formats.add("underline");
+    if (document.queryCommandState("strikeThrough"))
+      formats.add("strikeThrough");
+    if (document.queryCommandState("insertUnorderedList"))
+      formats.add("insertUnorderedList");
+    if (document.queryCommandState("insertOrderedList"))
+      formats.add("insertOrderedList");
+    if (document.queryCommandState("justifyLeft")) formats.add("justifyLeft");
+    if (document.queryCommandState("justifyCenter"))
+      formats.add("justifyCenter");
+    if (document.queryCommandState("justifyRight")) formats.add("justifyRight");
+    if (document.queryCommandState("justifyFull")) formats.add("justifyFull");
+
+    setActiveFormats(formats);
+  }, []);
+
+  const handleContentChange = useCallback(() => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+      updateFormatState();
+      setTimeout(() => applySyntaxHighlighting(), 10);
+    }
+  }, [onChange, updateFormatState]);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (document.activeElement === editorRef.current) updateFormatState();
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", handleSelectionChange);
+  }, [updateFormatState]);
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0)
+      savedSelectionRef.current = sel.getRangeAt(0);
+  };
+
+  const restoreSelection = () => {
+    if (savedSelectionRef.current) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedSelectionRef.current);
+    }
+  };
+
+  const execCommand = (cmd: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+    setTimeout(() => {
+      handleContentChange();
+      updateFormatState();
+    }, 10);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case "b":
+          e.preventDefault();
+          execCommand("bold");
+          break;
+        case "i":
+          e.preventDefault();
+          execCommand("italic");
+          break;
+        case "u":
+          e.preventDefault();
+          execCommand("underline");
+          break;
+        case "z":
+          e.preventDefault();
+          execCommand(e.shiftKey ? "redo" : "undo");
+          break;
+        case "y":
+          e.preventDefault();
+          execCommand("redo");
+          break;
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData("text/html");
+    const text = e.clipboardData.getData("text/plain");
+    if (html) {
+      let clean = html
+        .replace(/<\/?o:p>/gi, "")
+        .replace(/<\/?w:[^>]*>/gi, "")
+        .replace(/class="?Mso[^"]*"?/gi, "")
+        .replace(/style="[^"]*mso-[^"]*"/gi, "")
+        .replace(/<span[^>]*>\s*<\/span>/gi, "");
+      const div = document.createElement("div");
+      div.innerHTML = clean;
+      const allowed = [
+        "p",
+        "br",
+        "strong",
+        "b",
+        "em",
+        "i",
+        "u",
+        "h1",
+        "h2",
+        "h3",
+        "ul",
+        "ol",
+        "li",
+        "a",
+        "table",
+        "tr",
+        "td",
+        "th",
+        "thead",
+        "tbody",
+        "pre",
+        "code",
+      ];
+      div.querySelectorAll("*").forEach((el) => {
+        if (!allowed.includes(el.tagName.toLowerCase())) {
+          const p = el.parentNode;
+          while (el.firstChild) p?.insertBefore(el.firstChild, el);
+          p?.removeChild(el);
+        }
+      });
+      document.execCommand("insertHTML", false, div.innerHTML);
+    } else {
+      document.execCommand("insertHTML", false, text.replace(/\n/g, "<br>"));
+    }
+    setTimeout(() => {
+      handleContentChange();
+      updateFormatState();
+    }, 10);
+  };
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (
+        showLinkModal &&
+        linkModalRef.current &&
+        !linkModalRef.current.contains(t)
+      )
+        closeLinkModal();
+      if (
+        showImageModal &&
+        imageModalRef.current &&
+        !imageModalRef.current.contains(t)
+      )
+        closeImageModal();
+      if (
+        showTableModal &&
+        tableModalRef.current &&
+        !tableModalRef.current.contains(t)
+      )
+        closeTableModal();
+      if (
+        showColumnModal &&
+        columnModalRef.current &&
+        !columnModalRef.current.contains(t)
+      )
+        closeColumnModal();
+      if (
+        showCodeModal &&
+        codeModalRef.current &&
+        !codeModalRef.current.contains(t)
+      )
+        closeCodeModal();
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [
+    showLinkModal,
+    showImageModal,
+    showTableModal,
+    showColumnModal,
+    showCodeModal,
+  ]);
+
+  const openLinkModal = () => {
+    saveSelection();
+    const sel = window.getSelection();
+    const txt = sel?.toString() || "";
+    const rng = sel?.getRangeAt(0);
+    const con = rng?.commonAncestorContainer;
+    let link: HTMLAnchorElement | null = null;
+    if (con)
+      link =
+        con.nodeType === Node.ELEMENT_NODE
+          ? (con as HTMLElement).closest("a")
+          : con.parentElement?.closest("a") || null;
+    if (link) {
+      setLinkUrl(link.href);
+      setLinkText(link.textContent || "");
+      setSelectedElement(link);
+    } else {
+      setLinkUrl("");
+      setLinkText(txt);
+      setSelectedElement(null);
+    }
+    setShowLinkModal(true);
+  };
+
+  const insertLink = () => {
+    if (!linkUrl.trim()) return;
+    const url = linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}`;
+    const txt = linkText.trim() || url;
+    if (selectedElement && selectedElement.tagName === "A") {
+      selectedElement.href = url;
+      selectedElement.textContent = txt;
+    } else {
+      restoreSelection();
+      editorRef.current?.focus();
+      document.execCommand(
+        "insertHTML",
+        false,
+        `<a href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>&nbsp;`
+      );
+    }
+    handleContentChange();
+    closeLinkModal();
+  };
+
+  const removeLink = () => {
+    if (selectedElement && selectedElement.tagName === "A") {
+      selectedElement.parentNode?.replaceChild(
+        document.createTextNode(selectedElement.textContent || ""),
+        selectedElement
+      );
+      handleContentChange();
+    }
+    closeLinkModal();
+  };
+
+  const closeLinkModal = () => {
+    setShowLinkModal(false);
+    setLinkUrl("");
+    setLinkText("");
+    setSelectedElement(null);
+    editorRef.current?.focus();
+  };
+
+  const openImageModal = () => {
+    saveSelection();
+    setImageUrl("");
+    setImageAlt("");
+    setImageWidth("100");
+    setImageHeight("");
+    setImageInputType("url");
+    setUploadedImagePreview(null);
+    setShowImageModal(true);
+  };
+
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const prev = URL.createObjectURL(file);
+    setUploadedImagePreview(prev);
+    setIsUploadingImage(true);
+    try {
+      const url = await uploadImageInIMGBB(file);
+      setImageUrl(url);
+      toast.success("Uploaded!");
+    } catch {
+      toast.error("Failed");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const insertImage = () => {
+    if (!imageUrl.trim()) return;
+    const w = imageWidth ? `${imageWidth}%` : "100%";
+    const h = imageHeight ? `${imageHeight}px` : "auto";
+    restoreSelection();
+    editorRef.current?.focus();
+    document.execCommand(
+      "insertHTML",
+      false,
+      `<img src="${imageUrl.trim()}" alt="${
+        imageAlt.trim() || "Image"
+      }" style="max-width: ${w}; height: ${h}; border-radius: 8px; margin: 10px 0; display: block;" /><br/>`
+    );
+    handleContentChange();
+    closeImageModal();
+  };
+
+  const closeImageModal = () => {
+    setShowImageModal(false);
+    setImageUrl("");
+    setImageAlt("");
+    setImageWidth("100");
+    setImageHeight("");
+    setImageInputType("url");
+    setUploadedImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (uploadedImagePreview) URL.revokeObjectURL(uploadedImagePreview);
+    editorRef.current?.focus();
+  };
+
+  const openTableModal = () => {
+    saveSelection();
+    setTableRows(3);
+    setTableCols(3);
+    setTableHasHeader(true);
+    setTableHeaderColor("#f3f4f6");
+    setShowTableModal(true);
+  };
+
+  const insertTable = () => {
+    restoreSelection();
+    editorRef.current?.focus();
+    let html =
+      '<table style="width: 100%; border-collapse: collapse; margin: 1em 0; background: transparent;">';
+    if (tableHasHeader) {
+      html += "<thead><tr>";
+      for (let i = 0; i < tableCols; i++)
+        html += `<th style="border: 1px solid #ddd; padding: 12px; background: ${tableHeaderColor}; font-weight: 600;">Header ${
+          i + 1
+        }</th>`;
+      html += "</tr></thead>";
+    }
+    html += "<tbody>";
+    for (let i = 0; i < (tableHasHeader ? tableRows - 1 : tableRows); i++) {
+      html += "<tr>";
+      for (let j = 0; j < tableCols; j++)
+        html +=
+          '<td style="border: 1px solid #ddd; padding: 12px; background: transparent;">Cell</td>';
+      html += "</tr>";
+    }
+    html += "</tbody></table><p><br></p>";
+    document.execCommand("insertHTML", false, html);
+    handleContentChange();
+    closeTableModal();
+  };
+
+  const closeTableModal = () => {
+    setShowTableModal(false);
+    editorRef.current?.focus();
+  };
+
+  const openColumnModal = () => {
+    saveSelection();
+    setColumnCount(2);
+    setShowColumnModal(true);
+  };
+
+  const insertColumns = () => {
+    restoreSelection();
+    editorRef.current?.focus();
+    let html =
+      '<div style="display: flex; gap: 16px; margin: 1em 0; background: transparent;">';
+    for (let i = 0; i < columnCount; i++)
+      html += `<div style="flex: 1; min-width: 0; border: 1px dashed #ddd; padding: 12px; border-radius: 4px; background: transparent;" contenteditable="true">Column ${
+        i + 1
+      }<br>Add content...</div>`;
+    html += "</div><p><br></p>";
+    document.execCommand("insertHTML", false, html);
+    handleContentChange();
+    closeColumnModal();
+  };
+
+  const closeColumnModal = () => {
+    setShowColumnModal(false);
+    editorRef.current?.focus();
+  };
+
+  const openCodeModal = () => {
+    saveSelection();
+    setCodeLanguage("c");
+    setCodeContent("");
+    setShowCodeModal(true);
+  };
+
+  const insertCodeBlock = () => {
+    if (!codeContent.trim()) return;
+    restoreSelection();
+    editorRef.current?.focus();
+
+    const escapedCode = codeContent
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+    const html = `<pre class="code-block-wrapper" data-language="${codeLanguage}"><code data-language="${codeLanguage}">${escapedCode}</code></pre><p><br></p>`;
+    document.execCommand("insertHTML", false, html);
+
+    setTimeout(() => {
+      handleContentChange();
+      applySyntaxHighlighting();
+    }, 10);
+
+    closeCodeModal();
+  };
+
+  const closeCodeModal = () => {
+    setShowCodeModal(false);
+    setCodeContent("");
+    editorRef.current?.focus();
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    const t = e.target as HTMLElement;
+    if (t.tagName === "A") {
+      e.preventDefault();
+      setSelectedElement(t);
+      setLinkUrl((t as HTMLAnchorElement).href);
+      setLinkText(t.textContent || "");
+      setShowLinkModal(true);
+    } else if (t.tagName === "IMG") {
+      e.preventDefault();
+      setImageUrl((t as HTMLImageElement).src);
+      setImageAlt((t as HTMLImageElement).alt);
+      const s = t.getAttribute("style") || "";
+      const m = s.match(/max-width:\s*(\d+)%/);
+      if (m) setImageWidth(m[1]);
+      setShowImageModal(true);
+    }
+  };
+
+  const colors = [
+    "#000000",
+    "#e60000",
+    "#ff9900",
+    "#ffff00",
+    "#008a00",
+    "#0066cc",
+    "#9933ff",
+    "#ffffff",
+    "#facccc",
+    "#ffebcc",
+    "#ffffcc",
+    "#cce8cc",
+    "#cce0f5",
+    "#ebd6ff",
+    "#bbbbbb",
+    "#f06666",
+    "#ffc266",
+    "#ffff66",
+    "#66b966",
+    "#66a3e0",
+    "#c285ff",
+    "#888888",
+    "#a10000",
+    "#b26b00",
+  ];
+  const highlights = [
+    "#ffff00",
+    "#00ff00",
+    "#00ffff",
+    "#ff00ff",
+    "#ff0000",
+    "#0000ff",
+    "#ffcc00",
+    "#ff6600",
+    "#00cc00",
+    "#0099cc",
+    "#6600cc",
+    "#cc0099",
+  ];
+  const tableColors = [
+    { n: "Light Gray", v: "#f3f4f6" },
+    { n: "Blue", v: "#dbeafe" },
+    { n: "Green", v: "#d1fae5" },
+    { n: "Yellow", v: "#fef3c7" },
+    { n: "Red", v: "#fee2e2" },
+    { n: "Purple", v: "#e9d5ff" },
+    { n: "None", v: "transparent" },
+  ];
+
+  const codeLanguages = [
+    { value: "c", label: "C" },
+    { value: "cpp", label: "C++" },
+    { value: "java", label: "Java" },
+    { value: "python", label: "Python" },
+    { value: "javascript", label: "JavaScript" },
+    { value: "typescript", label: "TypeScript" },
+    { value: "csharp", label: "C#" },
+  ];
+
+  const btns = [
+    { c: "bold", i: Bold, t: "Bold" },
+    { c: "italic", i: Italic, t: "Italic" },
+    { c: "underline", i: Underline, t: "Underline" },
+    { c: "strikeThrough", i: Strikethrough, t: "Strike" },
+    { d: true },
+    { c: "insertUnorderedList", i: List, t: "Bullets" },
+    { c: "insertOrderedList", i: ListOrdered, t: "Numbers" },
+    { d: true },
+    { c: "justifyLeft", i: AlignLeft, t: "Left" },
+    { c: "justifyCenter", i: AlignCenter, t: "Center" },
+    { c: "justifyRight", i: AlignRight, t: "Right" },
+    { c: "justifyFull", i: AlignJustify, t: "Justify" },
+  ];
+
+  return (
+    <div className={`rich-text-editor-pro ${className}`}>
+      <div className="relative border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-900">
+        <div className="flex flex-wrap items-center gap-1 p-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850">
+          <select
+            className="px-3 py-2 text-sm font-medium border-2 rounded-lg mr-2 bg-white dark:bg-gray-800"
+            onChange={(e) => execCommand("formatBlock", `<${e.target.value}>`)}
+            value={currentFormat}
+          >
+            <option value="p">Paragraph</option>
+            <option value="h1">Heading 1</option>
+            <option value="h2">Heading 2</option>
+            <option value="h3">Heading 3</option>
+            <option value="blockquote">Quote</option>
+          </select>
+          <select
+            className="px-3 py-2 text-sm font-medium border-2 rounded-lg mr-2 bg-white dark:bg-gray-800"
+            onChange={(e) => execCommand("fontSize", e.target.value)}
+            value={currentFontSize}
+          >
+            <option value="1">10px</option>
+            <option value="2">13px</option>
+            <option value="3">16px</option>
+            <option value="4">18px</option>
+            <option value="5">24px</option>
+            <option value="6">32px</option>
+            <option value="7">48px</option>
+          </select>
+          <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          {btns.map((b, i) =>
+            b.d ? (
+              <div
+                key={i}
+                className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1"
+              />
+            ) : (
+              <Button
+                key={b.c}
+                type="button"
+                variant={activeFormats.has(b.c!) ? "default" : "ghost"}
+                size="sm"
+                onClick={() => execCommand(b.c!)}
+                title={b.t}
+                className="h-9 w-9 p-0"
+              >
+                <b.i className="h-4 w-4" />
+              </Button>
+            )
+          )}
+          <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowColorPicker(!showColorPicker);
+                setShowHighlightPicker(false);
+              }}
+              className="h-9 w-9 p-0"
+            >
+              <Type className="h-4 w-4" />
+            </Button>
+            {showColorPicker && (
+              <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-gray-800 border-2 rounded-lg shadow-xl z-50">
+                <div className="grid grid-cols-6 gap-2 w-48">
+                  {colors.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className="w-6 h-6 rounded border-2"
+                      style={{ backgroundColor: c }}
+                      onClick={() => {
+                        execCommand("foreColor", c);
+                        setShowColorPicker(false);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowHighlightPicker(!showHighlightPicker);
+                setShowColorPicker(false);
+              }}
+              className="h-9 w-9 p-0"
+            >
+              <Highlighter className="h-4 w-4" />
+            </Button>
+            {showHighlightPicker && (
+              <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-gray-800 border-2 rounded-lg shadow-xl z-50">
+                <div className="grid grid-cols-6 gap-2 w-48">
+                  {highlights.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className="w-6 h-6 rounded border-2"
+                      style={{ backgroundColor: c }}
+                      onClick={() => {
+                        execCommand("hiliteColor", c);
+                        setShowHighlightPicker(false);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openCodeModal}
+            title="Code Block"
+            className="h-9 w-9 p-0"
+          >
+            <Code2 className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openLinkModal}
+            className="h-9 w-9 p-0"
+          >
+            <Link className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openImageModal}
+            className="h-9 w-9 p-0"
+          >
+            <ImageIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openTableModal}
+            className="h-9 w-9 p-0"
+          >
+            <Table className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openColumnModal}
+            className="h-9 w-9 p-0"
+          >
+            <Columns className="h-4 w-4" />
+          </Button>
+          <div className="h-8 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => execCommand("undo")}
+            className="h-9 w-9 p-0"
+          >
+            <Undo className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => execCommand("redo")}
+            className="h-9 w-9 p-0"
+          >
+            <Redo className="h-4 w-4" />
+          </Button>
+        </div>
+        <div
+          ref={editorRef}
+          contentEditable
+          className={`rich-text-content p-8 outline-none overflow-y-auto text-gray-900 dark:text-gray-100 ${
+            isFocused ? "ring-2 ring-blue-500 ring-opacity-30" : ""
+          }`}
+          style={{ minHeight }}
+          onFocus={() => {
+            setIsFocused(true);
+            updateFormatState();
+          }}
+          onBlur={() => setIsFocused(false)}
+          onInput={handleContentChange}
+          onKeyDown={handleKeyDown}
+          onKeyUp={updateFormatState}
+          onClick={updateFormatState}
+          onPaste={handlePaste}
+          onDoubleClick={handleDoubleClick}
+          data-placeholder={placeholder}
+          suppressContentEditableWarning={true}
+        />
+        <div className="flex justify-between items-center px-6 py-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 border-t-2">
+          <div className="flex gap-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+            <span>
+              Words: <span className="text-blue-600">{wordCount}</span>
+            </span>
+            <span>
+              Chars: <span className="text-blue-600">{charCount}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Modals - Link, Image, Table, Column, Code */}
+        {showLinkModal && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
+            <div
+              ref={linkModalRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-8"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold flex items-center gap-2">
+                  <Link className="h-6 w-6" />
+                  {selectedElement ? "Edit Link" : "Insert Link"}
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeLinkModal}
+                  className="h-10 w-10 p-0 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    URL
+                  </label>
+                  <input
+                    type="url"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && insertLink()}
+                    placeholder="https://example.com"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Text
+                  </label>
+                  <input
+                    type="text"
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && insertLink()}
+                    placeholder="Link text"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between mt-8 gap-3">
+                {selectedElement && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={removeLink}
+                  >
+                    Remove
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeLinkModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={insertLink}
+                  disabled={!linkUrl.trim()}
+                  className="bg-blue-600"
+                >
+                  {selectedElement ? "Update" : "Insert"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showImageModal && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
+            <div
+              ref={imageModalRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold flex items-center gap-2">
+                  <ImageIcon className="h-6 w-6" />
+                  Insert Image
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeImageModal}
+                  className="h-10 w-10 p-0 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              {enableImageUpload && (
+                <div className="flex gap-2 mb-6">
+                  <Button
+                    type="button"
+                    variant={imageInputType === "url" ? "default" : "outline"}
+                    onClick={() => setImageInputType("url")}
+                    className="flex-1"
+                  >
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    URL
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={
+                      imageInputType === "upload" ? "default" : "outline"
+                    }
+                    onClick={() => setImageInputType("upload")}
+                    className="flex-1"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload
+                  </Button>
+                </div>
+              )}
+              <div className="space-y-5">
+                {imageInputType === "url" ? (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Upload
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFile}
+                      disabled={isUploadingImage}
+                      className="w-full px-4 py-3 border-2 rounded-lg bg-white dark:bg-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700"
+                    />
+                    {isUploadingImage && (
+                      <p className="text-sm text-blue-600 mt-2">Uploading...</p>
+                    )}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Alt Text
+                  </label>
+                  <input
+                    type="text"
+                    value={imageAlt}
+                    onChange={(e) => setImageAlt(e.target.value)}
+                    placeholder="Description"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Width (%)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        step="5"
+                        value={imageWidth}
+                        onChange={(e) => setImageWidth(e.target.value)}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-semibold min-w-[45px]">
+                        {imageWidth}%
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Height (px)
+                    </label>
+                    <input
+                      type="number"
+                      value={imageHeight}
+                      onChange={(e) => setImageHeight(e.target.value)}
+                      placeholder="Auto"
+                      className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                    />
+                  </div>
+                </div>
+                {(imageUrl || uploadedImagePreview) && (
+                  <div className="mt-4">
+                    <p className="text-sm font-semibold mb-2">Preview:</p>
+                    <div className="border-2 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                      <img
+                        src={uploadedImagePreview || imageUrl}
+                        alt="Preview"
+                        style={{
+                          maxWidth: `${imageWidth}%`,
+                          height: imageHeight ? `${imageHeight}px` : "auto",
+                        }}
+                        className="mx-auto rounded-lg"
+                        onError={(e) =>
+                          (e.currentTarget.style.display = "none")
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end mt-8 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeImageModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={insertImage}
+                  disabled={!imageUrl.trim() || isUploadingImage}
+                  className="bg-blue-600"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Insert
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showTableModal && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
+            <div
+              ref={tableModalRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold flex items-center gap-2">
+                  <Table className="h-6 w-6" />
+                  Insert Table
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeTableModal}
+                  className="h-10 w-10 p-0 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-3">
+                    Rows
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTableRows(Math.max(1, tableRows - 1))}
+                      className="h-10 w-10 p-0"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-2xl font-bold min-w-[40px] text-center">
+                      {tableRows}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTableRows(Math.min(20, tableRows + 1))}
+                      className="h-10 w-10 p-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-3">
+                    Columns
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTableCols(Math.max(1, tableCols - 1))}
+                      className="h-10 w-10 p-0"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-2xl font-bold min-w-[40px] text-center">
+                      {tableCols}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTableCols(Math.min(10, tableCols + 1))}
+                      className="h-10 w-10 p-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="hdr"
+                    checked={tableHasHeader}
+                    onChange={(e) => setTableHasHeader(e.target.checked)}
+                    className="h-5 w-5"
+                  />
+                  <label
+                    htmlFor="hdr"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Header row
+                  </label>
+                </div>
+                {tableHasHeader && (
+                  <div>
+                    <label className="block text-sm font-semibold mb-3">
+                      Header Color
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {tableColors.map((c) => (
+                        <button
+                          key={c.v}
+                          type="button"
+                          onClick={() => setTableHeaderColor(c.v)}
+                          className={`p-3 rounded-lg border-2 text-xs font-medium ${
+                            tableHeaderColor === c.v
+                              ? "border-blue-500 ring-2 ring-blue-200"
+                              : "border-gray-300"
+                          }`}
+                          style={{
+                            backgroundColor:
+                              c.v === "transparent" ? "#fff" : c.v,
+                          }}
+                        >
+                          {c.n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end mt-8 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeTableModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={insertTable}
+                  className="bg-blue-600"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Insert
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showColumnModal && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
+            <div
+              ref={columnModalRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold flex items-center gap-2">
+                  <Columns className="h-6 w-6" />
+                  Insert Columns
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeColumnModal}
+                  className="h-10 w-10 p-0 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-4">
+                    Columns
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setColumnCount(Math.max(1, columnCount - 1))
+                      }
+                      className="h-10 w-10 p-0"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-2xl font-bold min-w-[40px] text-center">
+                      {columnCount}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setColumnCount(Math.min(4, columnCount + 1))
+                      }
+                      className="h-10 w-10 p-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end mt-8 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeColumnModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={insertColumns}
+                  className="bg-blue-600"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Insert
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCodeModal && (
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
+            <div
+              ref={codeModalRef}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold flex items-center gap-2">
+                  <Code2 className="h-6 w-6" />
+                  Insert Code Block
+                </h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeCodeModal}
+                  className="h-10 w-10 p-0 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Language
+                  </label>
+                  <select
+                    value={codeLanguage}
+                    onChange={(e) => setCodeLanguage(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                  >
+                    {codeLanguages.map((lang) => (
+                      <option key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Code
+                  </label>
+                  <textarea
+                    value={codeContent}
+                    onChange={(e) => setCodeContent(e.target.value)}
+                    placeholder="Enter your code here..."
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 font-mono text-sm"
+                    rows={12}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end mt-8 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeCodeModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={insertCodeBlock}
+                  disabled={!codeContent.trim()}
+                  className="bg-blue-600"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Insert
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: getRichTextStyles() }} />
+    </div>
+  );
+};
+
+export default RichTextEditor;
