@@ -51,6 +51,7 @@ import {
   statusForAuthorWithRevision,
 } from "@/lib/constants/env";
 import { useSession } from "@/lib/better-auth-client-and-actions/auth-client";
+import { cleanHtmlForSave } from "@/lib/utils/cleanHtmlForSave";
 
 interface BlogPostFormProps {
   postId?: string;
@@ -277,9 +278,11 @@ export function BlogPostForm({
 
   const onSubmit = async (data: BlogPostFormValues) => {
     try {
+      // Clean HTML content before saving to database
       const payload = {
         ...data,
         categories: selectedCategories,
+        content: data.content ? cleanHtmlForSave(data.content) : data.content,
       };
 
       if (postId) {

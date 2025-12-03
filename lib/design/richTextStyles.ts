@@ -6,7 +6,10 @@ export const getRichTextStyles = () => `
     word-wrap: break-word;
     overflow-wrap: break-word;
     max-width: 100%;
-    overflow-x: hidden
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility
 }
 
 .rich-text-content>*,
@@ -107,57 +110,41 @@ export const getRichTextStyles = () => `
 }
 
 .rich-text-content font[size="1"],
-.rich-text-content [size="1"],
-.rich-text-display font[size="1"],
-.rich-text-display [size="1"] {
+.rich-text-display font[size="1"] {
     font-size: 10px !important
 }
 
 .rich-text-content font[size="2"],
-.rich-text-content [size="2"],
-.rich-text-display font[size="2"],
-.rich-text-display [size="2"] {
+.rich-text-display font[size="2"] {
     font-size: 13px !important
 }
 
 .rich-text-content font[size="3"],
-.rich-text-content [size="3"],
-.rich-text-display font[size="3"],
-.rich-text-display [size="3"] {
+.rich-text-display font[size="3"] {
     font-size: 16px !important
 }
 
 .rich-text-content font[size="4"],
-.rich-text-content [size="4"],
-.rich-text-display font[size="4"],
-.rich-text-display [size="4"] {
+.rich-text-display font[size="4"] {
     font-size: 18px !important
 }
 
 .rich-text-content font[size="5"],
-.rich-text-content [size="5"],
-.rich-text-display font[size="5"],
-.rich-text-display [size="5"] {
+.rich-text-display font[size="5"] {
     font-size: 24px !important
 }
 
 .rich-text-content font[size="6"],
-.rich-text-content [size="6"],
-.rich-text-display font[size="6"],
-.rich-text-display [size="6"] {
+.rich-text-display font[size="6"] {
     font-size: 32px !important
 }
 
 .rich-text-content font[size="7"],
-.rich-text-content [size="7"],
-.rich-text-display font[size="7"],
-.rich-text-display [size="7"] {
+.rich-text-display font[size="7"] {
     font-size: 48px !important
 }
 
-.rich-text-content [style*="background-color"],
 .rich-text-content [style*="background"],
-.rich-text-display [style*="background-color"],
 .rich-text-display [style*="background"] {
     padding: .1em .3em;
     border-radius: 3px
@@ -180,6 +167,13 @@ export const getRichTextStyles = () => `
 .rich-text-content a:visited,
 .rich-text-display a:visited {
     color: #7c3aed
+}
+
+.rich-text-content a:focus,
+.rich-text-display a:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 2px
 }
 
 @media (prefers-color-scheme:dark) {
@@ -289,7 +283,7 @@ export const getRichTextStyles = () => `
     background: rgba(59, 130, 246, .1);
     padding: .2em .4em;
     border-radius: 4px;
-    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
     font-size: .9em;
     color: #be185d;
     word-break: break-word
@@ -312,18 +306,14 @@ export const getRichTextStyles = () => `
     color: #e2e8f0;
     border-radius: 12px;
     overflow: hidden;
-    font-family: 'Courier New', 'Consolas', 'Monaco', 'Menlo', monospace;
+    font-family: 'Courier New', Consolas, Monaco, Menlo, monospace;
     font-size: 14px;
     line-height: 1.7;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
     border: 1px solid #1e293b;
     max-width: 100%;
     width: 100%;
-    box-sizing: border-box
-}
-
-.rich-text-content pre.code-enhanced,
-.rich-text-display pre.code-enhanced {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: stretch
@@ -341,7 +331,9 @@ export const getRichTextStyles = () => `
     width: 100%;
     position: sticky;
     top: 0;
-    z-index: 20
+    z-index: 20;
+    pointer-events: auto;
+    user-select: none
 }
 
 .rich-text-content .code-language-label,
@@ -360,7 +352,9 @@ export const getRichTextStyles = () => `
 .rich-text-content .code-actions,
 .rich-text-display .code-actions {
     display: flex;
-    gap: .625em
+    gap: .625em;
+    pointer-events: auto;
+    user-select: none
 }
 
 .rich-text-content .code-action-btn,
@@ -375,7 +369,17 @@ export const getRichTextStyles = () => `
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(8px)
+    backdrop-filter: blur(8px);
+    pointer-events: auto;
+    user-select: none;
+    outline: none;
+    position: relative;
+    z-index: 10
+}
+
+.rich-text-content .code-action-btn svg,
+.rich-text-display .code-action-btn svg {
+    pointer-events: none
 }
 
 .rich-text-content .code-action-btn:hover,
@@ -427,28 +431,39 @@ export const getRichTextStyles = () => `
     line-height: 1.7 !important;
     font-weight: 500;
     white-space: pre;
-    font-family: 'Courier New', 'Consolas', 'Monaco', 'Menlo', monospace !important
+    font-family: 'Courier New', Consolas, Monaco, Menlo, monospace !important
 }
 
-.rich-text-content .code-container>code,.rich-text-display .code-container>code{
-  flex:1;
-  min-width:0;
-  display:block;
-  padding:1.5em 1.75em;
-  background:transparent;
-  color:inherit;
-  overflow-x:auto;
-  white-space:pre;
-  line-height:1.7!important;
-  font-size:14px!important;
-  box-sizing:border-box;
-  font-family:'Courier New','Consolas','Monaco','Menlo',monospace!important;
-  max-width:100%
+.rich-text-content .code-container>code,
+.rich-text-display .code-container>code {
+    flex: 1;
+    min-width: 0;
+    display: block;
+    padding: 1.5em 1.75em;
+    background: transparent;
+    color: inherit;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.7 !important;
+    font-size: 14px !important;
+    box-sizing: border-box;
+    font-family: 'Courier New', Consolas, Monaco, Menlo, monospace !important;
+    max-width: 100%
 }
-  .rich-text-content pre.show-raw .line-numbers-wrapper,
-.rich-text-display pre.show-raw .line-numbers-wrapper{
-  display:none!important
+
+.rich-text-content pre.show-raw .line-numbers-wrapper,
+.rich-text-display pre.show-raw .line-numbers-wrapper {
+    display: none !important
 }
+
+.rich-text-content pre.show-raw code *,
+.rich-text-display pre.show-raw code * {
+    color: #e2e8f0 !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    background: transparent !important
+}
+
 .rich-text-content pre:not(.code-enhanced),
 .rich-text-display pre:not(.code-enhanced) {
     padding: 1.5em;
@@ -477,115 +492,69 @@ export const getRichTextStyles = () => `
     border-radius: 0
 }
 
-.rich-text-content pre.show-raw .code-container,
-.rich-text-display pre.show-raw .code-container {
-    font-family: 'Courier New', 'Consolas', 'Monaco', monospace
-}
-
-.rich-text-content pre.show-raw code,
-.rich-text-display pre.show-raw code {
-    white-space: pre;
-    color: #e2e8f0 !important
-}
-.rich-text-content pre.show-raw .line-numbers-wrapper,
-.rich-text-display pre.show-raw .line-numbers-wrapper {
-  display: none !important;
-}
-.rich-text-content pre.show-raw code *,
-.rich-text-display pre.show-raw code * {
-    color: #e2e8f0 !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    background: transparent !important
-}
-
-.rich-text-content code .token-keyword,
-.rich-text-display code .token-keyword,
 .rich-text-content .token-keyword,
 .rich-text-display .token-keyword {
     color: #d4a5ff !important;
     font-weight: 600
 }
 
-.rich-text-content code .token-string,
-.rich-text-display code .token-string,
 .rich-text-content .token-string,
 .rich-text-display .token-string {
     color: #b3f097 !important;
     font-weight: 500
 }
 
-.rich-text-content code .token-comment,
-.rich-text-display code .token-comment,
 .rich-text-content .token-comment,
 .rich-text-display .token-comment {
     color: #8896a8 !important;
     font-style: italic
 }
 
-.rich-text-content code .token-number,
-.rich-text-display code .token-number,
 .rich-text-content .token-number,
 .rich-text-display .token-number {
     color: #ffb366 !important;
     font-weight: 600
 }
 
-.rich-text-content code .token-function,
-.rich-text-display code .token-function,
 .rich-text-content .token-function,
 .rich-text-display .token-function {
     color: #82aaff !important;
     font-weight: 600
 }
 
-.rich-text-content code .token-operator,
-.rich-text-display code .token-operator,
 .rich-text-content .token-operator,
 .rich-text-display .token-operator {
     color: #89ddff !important
 }
 
-.rich-text-content code .token-tag,
-.rich-text-display code .token-tag,
 .rich-text-content .token-tag,
 .rich-text-display .token-tag {
     color: #ff8a94 !important;
     font-weight: 500
 }
 
-.rich-text-content code .token-attr,
-.rich-text-display code .token-attr,
 .rich-text-content .token-attr,
 .rich-text-display .token-attr {
     color: #d4a5ff !important
 }
 
-.rich-text-content code .token-property,
-.rich-text-display code .token-property,
 .rich-text-content .token-property,
 .rich-text-display .token-property {
     color: #8dd8d0 !important;
     font-weight: 500
 }
 
-.rich-text-content code .token-value,
-.rich-text-display code .token-value,
 .rich-text-content .token-value,
 .rich-text-display .token-value {
     color: #b3f097 !important
 }
 
-.rich-text-content code .token-selector,
-.rich-text-display code .token-selector,
 .rich-text-content .token-selector,
 .rich-text-display .token-selector {
     color: #ffd478 !important;
     font-weight: 600
 }
 
-.rich-text-content code .token-boolean,
-.rich-text-display code .token-boolean,
 .rich-text-content .token-boolean,
 .rich-text-display .token-boolean {
     color: #ff6b85 !important;
@@ -747,18 +716,14 @@ export const getRichTextStyles = () => `
 }
 
 .rich-text-content>div[style*="display: flex"],
-.rich-text-content>div[style*="display:flex"],
-.rich-text-display>div[style*="display: flex"],
-.rich-text-display>div[style*="display:flex"] {
+.rich-text-display>div[style*="display: flex"] {
     display: flex !important;
     gap: 16px !important;
     margin: 1em 0 !important
 }
 
 .rich-text-content>div[style*="display: flex"]>div,
-.rich-text-content>div[style*="display:flex"]>div,
-.rich-text-display>div[style*="display: flex"]>div,
-.rich-text-display>div[style*="display:flex"]>div {
+.rich-text-display>div[style*="display: flex"]>div {
     flex: 1 !important;
     min-width: 0 !important;
     border: 1px dashed #ddd !important;
@@ -768,18 +733,14 @@ export const getRichTextStyles = () => `
 
 @media (prefers-color-scheme:dark) {
     .rich-text-content>div[style*="display: flex"]>div,
-    .rich-text-content>div[style*="display:flex"]>div,
-    .rich-text-display>div[style*="display: flex"]>div,
-    .rich-text-display>div[style*="display:flex"]>div {
+    .rich-text-display>div[style*="display: flex"]>div {
         border-color: #374151 !important
     }
 }
 
 @media (max-width:768px) {
     .rich-text-content>div[style*="display: flex"],
-    .rich-text-content>div[style*="display:flex"],
-    .rich-text-display>div[style*="display: flex"],
-    .rich-text-display>div[style*="display:flex"] {
+    .rich-text-display>div[style*="display: flex"] {
         flex-direction: column !important
     }
 }
@@ -809,51 +770,23 @@ export const getRichTextStyles = () => `
 }
 
 .rich-text-content [style*="text-align: left"],
-.rich-text-content [style*="text-align:left"],
-.rich-text-display [style*="text-align: left"],
-.rich-text-display [style*="text-align:left"] {
+.rich-text-display [style*="text-align: left"] {
     text-align: left !important
 }
 
 .rich-text-content [style*="text-align: center"],
-.rich-text-content [style*="text-align:center"],
-.rich-text-display [style*="text-align: center"],
-.rich-text-display [style*="text-align:center"] {
+.rich-text-display [style*="text-align: center"] {
     text-align: center !important
 }
 
 .rich-text-content [style*="text-align: right"],
-.rich-text-content [style*="text-align:right"],
-.rich-text-display [style*="text-align: right"],
-.rich-text-display [style*="text-align:right"] {
+.rich-text-display [style*="text-align: right"] {
     text-align: right !important
 }
 
 .rich-text-content [style*="text-align: justify"],
-.rich-text-content [style*="text-align:justify"],
-.rich-text-display [style*="text-align: justify"],
-.rich-text-display [style*="text-align:justify"] {
+.rich-text-display [style*="text-align: justify"] {
     text-align: justify !important
-}
-
-.rich-text-content blockquote>*:first-child,
-.rich-text-display blockquote>*:first-child {
-    margin-top: 0
-}
-
-.rich-text-content blockquote>*:last-child,
-.rich-text-display blockquote>*:last-child {
-    margin-bottom: 0
-}
-
-.rich-text-content li>*:first-child,
-.rich-text-display li>*:first-child {
-    margin-top: 0
-}
-
-.rich-text-content li>*:last-child,
-.rich-text-display li>*:last-child {
-    margin-bottom: 0
 }
 
 .rich-text-content br,
@@ -872,13 +805,6 @@ export const getRichTextStyles = () => `
 .rich-text-content ::selection,
 .rich-text-display ::selection {
     background: rgba(59, 130, 246, .3)
-}
-
-.rich-text-content a:focus,
-.rich-text-display a:focus {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-    border-radius: 2px
 }
 
 @media print {
@@ -911,9 +837,7 @@ export const getRichTextStyles = () => `
         page-break-inside: avoid
     }
     .rich-text-content pre code,
-    .rich-text-display pre code {
-        color: #000 !important
-    }
+    .rich-text-display pre code,
     .rich-text-content pre *,
     .rich-text-display pre * {
         color: #000 !important;
@@ -926,11 +850,7 @@ export const getRichTextStyles = () => `
         page-break-inside: avoid
     }
     .rich-text-content .code-action-btn,
-    .rich-text-display .code-action-btn,
-    .rich-text-content .code-raw-btn,
-    .rich-text-display .code-raw-btn,
-    .rich-text-content .code-copy-btn,
-    .rich-text-display .code-copy-btn {
+    .rich-text-display .code-action-btn {
         display: none !important
     }
     .rich-text-content .code-toolbar,
@@ -1033,13 +953,6 @@ export const getRichTextStyles = () => `
     }
 }
 
-.rich-text-content,
-.rich-text-display {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility
-}
-
 @media (prefers-contrast:high) {
     .rich-text-content a,
     .rich-text-display a {
@@ -1054,11 +967,7 @@ export const getRichTextStyles = () => `
 
 @media (prefers-reduced-motion:reduce) {
     .rich-text-content *,
-    .rich-text-content *::before,
-    .rich-text-content *::after,
-    .rich-text-display *,
-    .rich-text-display *::before,
-    .rich-text-display *::after {
+    .rich-text-display * {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important
@@ -1078,4 +987,5 @@ export const getRichTextStyles = () => `
 
 .rich-text-content[contenteditable] img {
     cursor: pointer
-}`;
+}
+`;

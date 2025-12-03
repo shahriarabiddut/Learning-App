@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import "@/models/users.model";
 import "@/models/categories.model";
 import { blogPostSchema } from "@/schemas/blogPostSchema";
+import { cleanHtmlForSaveServer } from "@/lib/utils/cleanHtmlForSave";
 
 // GET a single blog post
 export async function GET(
@@ -108,6 +109,11 @@ export async function PATCH(
   try {
     const id = params.id;
     const body = await request.json();
+    // console.log("Original Content:", body.content);
+    if (body.content) {
+      body.content = cleanHtmlForSaveServer(body.content);
+    }
+    // console.log("after Content:", body.content);
 
     // Last Check
     const postData = await BlogPost.findById(id);

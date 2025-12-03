@@ -1,4 +1,5 @@
 import { PERMISSIONS } from "@/lib/middle/permissions";
+import { cleanHtmlForSaveServer } from "@/lib/utils/cleanHtmlForSave";
 import BlogPost from "@/models/blogPost.model";
 import "@/models/categories.model";
 import "@/models/users.model";
@@ -158,6 +159,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    if (body.content) {
+      body.content = cleanHtmlForSaveServer(body.content);
+    }
     const validation = blogPostSchema.safeParse(body);
 
     if (!validation.success) {

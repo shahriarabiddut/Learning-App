@@ -1,4 +1,9 @@
 import { getRichTextStyles } from "@/lib/design/richTextStyles";
+// TODO: Re-enable highlightCode when syntax highlighting is fixed
+import {
+  /* highlightCode, */ createCodeToolbar,
+  createLineNumbers,
+} from "@/lib/utils/codeHighlighter";
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
@@ -24,311 +29,96 @@ const RichTextDisplay = ({
     full: "max-w-full",
   };
 
-  // Simple syntax highlighter
-  const highlightCode = (code: string, language: string): string => {
-    const escapeHtml = (text: string) =>
-      text.replace(/[&<>'"]/g, (char) => {
-        const escapeMap: { [key: string]: string } = {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          "'": "&#39;",
-          '"': "&quot;",
-        };
-        return escapeMap[char];
-      });
-
-    let highlighted = escapeHtml(code);
-
-    // Language-specific highlighting
-    switch (language.toLowerCase()) {
-      case "javascript":
-      case "typescript":
-      case "jsx":
-      case "tsx":
-        highlighted = highlighted.replace(
-          /\b(const|let|var|function|class|if|else|for|while|return|import|export|from|async|await|try|catch|new|this|super|extends|implements|interface|type|enum)\b/g,
-          '<span class="token-keyword">$1</span>'
-        );
-        highlighted = highlighted.replace(
-          /(["'`])(?:(?=(\\?))\2.)*?\1/g,
-          '<span class="token-string">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\/\/.*/g,
-          '<span class="token-comment">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\/\*[\s\S]*?\*\//g,
-          '<span class="token-comment">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\b\d+\.?\d*\b/g,
-          '<span class="token-number">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g,
-          '<span class="token-function">$1</span>('
-        );
-        break;
-
-      case "python":
-        highlighted = highlighted.replace(
-          /\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|with|lambda|pass|break|continue|and|or|not|in|is|None|True|False|finally|raise|assert|global|nonlocal|del|yield)\b/g,
-          '<span class="token-keyword">$1</span>'
-        );
-        highlighted = highlighted.replace(
-          /(["'])(?:(?=(\\?))\2.)*?\1/g,
-          '<span class="token-string">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /#.*/g,
-          '<span class="token-comment">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\b\d+\.?\d*\b/g,
-          '<span class="token-number">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\bdef\s+([a-zA-Z_][a-zA-Z0-9_]*)/g,
-          'def <span class="token-function">$1</span>'
-        );
-        break;
-
-      case "java":
-      case "c":
-      case "cpp":
-      case "csharp":
-        highlighted = highlighted.replace(
-          /\b(public|private|protected|class|void|int|String|boolean|if|else|for|while|return|new|static|final|abstract|interface|extends|implements|try|catch|throw|throws|float|double|char|long|short|byte)\b/g,
-          '<span class="token-keyword">$1</span>'
-        );
-        highlighted = highlighted.replace(
-          /(["'])(?:(?=(\\?))\2.)*?\1/g,
-          '<span class="token-string">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\/\/.*/g,
-          '<span class="token-comment">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\/\*[\s\S]*?\*\//g,
-          '<span class="token-comment">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\b\d+\.?\d*\b/g,
-          '<span class="token-number">$&</span>'
-        );
-        break;
-
-      case "html":
-      case "xml":
-        highlighted = highlighted.replace(
-          /&lt;\/?\w+(?:\s+[\w-]+(?:=(?:"[^"]*"|'[^']*'))?)*\s*\/?&gt;/g,
-          '<span class="token-tag">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /\s([\w-]+)=/g,
-          ' <span class="token-attr">$1</span>='
-        );
-        highlighted = highlighted.replace(
-          /=(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,
-          '=<span class="token-string">$1</span>'
-        );
-        break;
-
-      case "css":
-      case "scss":
-        highlighted = highlighted.replace(
-          /^([.#]?[a-zA-Z][a-zA-Z0-9-_]*)\s*\{/gm,
-          '<span class="token-selector">$1</span> {'
-        );
-        highlighted = highlighted.replace(
-          /\b([a-z-]+)\s*:/g,
-          '<span class="token-property">$1</span>:'
-        );
-        highlighted = highlighted.replace(
-          /:\s*([^;]+);/g,
-          ': <span class="token-value">$1</span>;'
-        );
-        highlighted = highlighted.replace(
-          /\/\*[\s\S]*?\*\//g,
-          '<span class="token-comment">$&</span>'
-        );
-        break;
-
-      case "sql":
-        highlighted = highlighted.replace(
-          /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|TABLE|DATABASE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|NULL|PRIMARY|KEY|FOREIGN|INDEX|ALTER|ADD|COLUMN)\b/gi,
-          '<span class="token-keyword">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /(["'])(?:(?=(\\?))\2.)*?\1/g,
-          '<span class="token-string">$&</span>'
-        );
-        highlighted = highlighted.replace(
-          /--.*/g,
-          '<span class="token-comment">$&</span>'
-        );
-        break;
-
-      case "json":
-        highlighted = highlighted.replace(
-          /&quot;([^&]+)&quot;\s*:/g,
-          '<span class="token-property">&quot;$1&quot;</span>:'
-        );
-        highlighted = highlighted.replace(
-          /:\s*&quot;([^&]*)&quot;/g,
-          ': <span class="token-string">&quot;$1&quot;</span>'
-        );
-        highlighted = highlighted.replace(
-          /:\s*(\d+\.?\d*)/g,
-          ': <span class="token-number">$1</span>'
-        );
-        highlighted = highlighted.replace(
-          /\b(true|false|null)\b/g,
-          '<span class="token-boolean">$1</span>'
-        );
-        break;
-    }
-
-    return highlighted;
-  };
-
   // Apply syntax highlighting to code blocks
   const applySyntaxHighlighting = () => {
     if (!displayRef.current) return;
 
-    const preBlocks = displayRef.current.querySelectorAll(
-      "pre:not(.code-highlighted)"
-    );
+    // Process ALL pre blocks (not just those without code-highlighted class)
+    const preBlocks = displayRef.current.querySelectorAll("pre");
 
     preBlocks.forEach((pre) => {
       const code = pre.querySelector("code");
-      if (code && !pre.classList.contains("code-highlighted")) {
-        // Get language from data attribute
-        const language = code.getAttribute("data-language") || "plaintext";
+      if (!code) return;
 
-        // Get original text content
-        const text = code.textContent || "";
+      // Skip if toolbar already exists
+      if (pre.querySelector(".code-toolbar")) return;
 
-        // Store original for copying
-        pre.setAttribute("data-raw-code", text);
+      // Get language and original text (NOT innerHTML, to avoid double-processing)
+      const language = code.getAttribute("data-language") || "plaintext";
+      const text = code.textContent || "";
 
-        // Mark as processed
-        pre.classList.add("code-highlighted", "code-enhanced");
-        pre.setAttribute("data-language", language);
-        pre.setAttribute("contenteditable", "false");
+      // Store original for copying
+      pre.setAttribute("data-raw-code", text);
 
-        // Clear code element completely first
-        code.textContent = "";
-        code.innerHTML = "";
+      // Mark as processed and NOT EDITABLE in display mode
+      pre.classList.add("code-highlighted", "code-enhanced");
+      pre.setAttribute("data-language", language);
+      pre.contentEditable = "false";
+      pre.style.userSelect = "text";
+      pre.style.cursor = "default";
 
-        // Apply syntax highlighting
-        const highlighted = highlightCode(text, language);
+      // Add toolbar FIRST
+      const toolbar = createCodeToolbar(
+        pre,
+        language,
+        text,
+        () => toast.success("Code copied!"),
+        () => toast.error("Failed to copy")
+      );
+      pre.insertBefore(toolbar, pre.firstChild);
 
-        // Set innerHTML directly (let browser parse HTML)
-        code.innerHTML = highlighted;
-        code.setAttribute("contenteditable", "false");
+      // Create container for alignment
+      const container = document.createElement("div");
+      container.className = "code-container";
+      container.contentEditable = "false";
 
-        // Add toolbar if not exists
-        if (!pre.querySelector(".code-toolbar")) {
-          const toolbar = document.createElement("div");
-          toolbar.className = "code-toolbar";
-          toolbar.setAttribute("contenteditable", "false");
+      // Create line numbers wrapper
+      const lineNumbersWrapper = createLineNumbers(text);
 
-          const langLabel = document.createElement("span");
-          langLabel.className = "code-language-label";
-          langLabel.textContent = language.toUpperCase();
+      // TODO: Fix syntax highlighting rendering issue
+      // Currently showing raw HTML tokens instead of rendered colors
+      // Need to investigate proper HTML rendering in frontend display
 
-          const actions = document.createElement("div");
-          actions.className = "code-actions";
+      // Create new code element with PLAIN TEXT (no highlighting for now)
+      const plainCode = document.createElement("code");
+      plainCode.setAttribute("data-language", language);
+      plainCode.textContent = text; // Plain text, no HTML rendering
+      plainCode.contentEditable = "false";
+      plainCode.style.userSelect = "text";
+      plainCode.style.cursor = "default";
+      plainCode.style.color = "#e2e8f0"; // Light gray color for plain text
 
-          // Raw view toggle button
-          const rawBtn = document.createElement("button");
-          rawBtn.className = "code-action-btn code-raw-btn";
-          rawBtn.setAttribute("type", "button");
-          rawBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
-          rawBtn.title = "Toggle raw view";
-          rawBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const isRaw = pre.classList.toggle("show-raw");
-            rawBtn.innerHTML = isRaw
-              ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`
-              : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
-          };
+      // COMMENTED OUT: Syntax highlighting (needs fix)
+      // plainCode.innerHTML = highlightCode(text, language);
 
-          // Copy button
-          const copyBtn = document.createElement("button");
-          copyBtn.className = "code-action-btn code-copy-btn";
-          copyBtn.setAttribute("type", "button");
-          copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-          copyBtn.title = "Copy code";
-          copyBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const rawCode = pre.getAttribute("data-raw-code") || text;
-            navigator.clipboard
-              .writeText(rawCode)
-              .then(() => {
-                toast.success("Code copied!");
-                copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
-                setTimeout(() => {
-                  copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-                }, 2000);
-              })
-              .catch((err) => {
-                console.error("Copy failed:", err);
-                toast.error("Failed to copy");
-              });
-          };
+      // Build structure
+      container.appendChild(lineNumbersWrapper);
+      container.appendChild(plainCode);
 
-          actions.appendChild(rawBtn);
-          actions.appendChild(copyBtn);
-          toolbar.appendChild(langLabel);
-          toolbar.appendChild(actions);
-          pre.insertBefore(toolbar, pre.firstChild);
-        }
-        // Create container for perfect alignment
-        if (!pre.querySelector(".code-container")) {
-          const container = document.createElement("div");
-          container.className = "code-container";
-          container.setAttribute("contenteditable", "false");
-
-          // Create line numbers wrapper
-          const wrapper = document.createElement("div");
-          wrapper.className = "line-numbers-wrapper";
-          wrapper.setAttribute("contenteditable", "false");
-
-          const lines = text.trimEnd().split("\n");
-          const lineNumbers = lines.map((_, i) => i + 1).join("\n");
-          const lineNumbersDiv = document.createElement("div");
-          lineNumbersDiv.className = "line-numbers";
-          lineNumbersDiv.textContent = lineNumbers;
-          lineNumbersDiv.setAttribute("contenteditable", "false");
-
-          wrapper.appendChild(lineNumbersDiv);
-
-          // Build proper structure
-          const codeClone = code.cloneNode(true) as HTMLElement;
-          container.appendChild(wrapper);
-          container.appendChild(codeClone);
-
-          // Remove old code and add container
-          if (code.parentNode === pre) {
-            pre.removeChild(code);
-          }
-          pre.appendChild(container);
-        }
+      // Remove old code and add container
+      if (code.parentNode === pre) {
+        pre.removeChild(code);
       }
+      pre.appendChild(container);
+    });
+
+    // Double-check: make all code elements non-editable
+    displayRef.current.querySelectorAll("pre, code").forEach((el) => {
+      (el as HTMLElement).contentEditable = "false";
     });
   };
 
   useEffect(() => {
-    // Apply syntax highlighting when content changes
     applySyntaxHighlighting();
   }, [content]);
+
+  useEffect(() => {
+    // Make entire display non-editable
+    if (displayRef.current) {
+      displayRef.current.setAttribute("contenteditable", "false");
+      displayRef.current.style.userSelect = "text";
+    }
+  }, []);
 
   if (!content) return null;
 
@@ -338,8 +128,9 @@ const RichTextDisplay = ({
         ref={displayRef}
         className={`rich-text-display ${maxWidthClasses[maxWidth]} ${className}`}
         dangerouslySetInnerHTML={{ __html: content }}
+        contentEditable={false}
+        suppressContentEditableWarning
       />
-
       <style dangerouslySetInnerHTML={{ __html: getRichTextStyles() }} />
     </>
   );
