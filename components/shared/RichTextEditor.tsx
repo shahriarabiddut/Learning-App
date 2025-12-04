@@ -119,6 +119,12 @@ export const RichTextEditor = ({
       pre.setAttribute("data-raw-code", text);
       pre.setAttribute("data-language", language);
 
+      // CRITICAL: Make code blocks NON-EDITABLE inline
+      // Users must use CodeBlockEditor modal to edit
+      pre.contentEditable = "false";
+      pre.style.cursor = "pointer";
+      pre.style.userSelect = "none";
+
       // Add toolbar FIRST
       const toolbar = createCodeToolbar(
         pre,
@@ -140,28 +146,32 @@ export const RichTextEditor = ({
           pre.removeChild(code);
         }
 
-        // Keep code as plain text - EDITABLE in editor mode
+        // Keep code as plain text - NON-EDITABLE
         code.textContent = text;
-        code.setAttribute("contenteditable", "true"); // EDITABLE
+        code.contentEditable = "false"; // NOT EDITABLE
         code.setAttribute("spellcheck", "false");
-        code.style.cursor = "text";
-
-        // Update line numbers on edit
-        code.addEventListener("input", () => {
-          const newText = code.textContent || "";
-          const lineNumbersDiv =
-            lineNumbersWrapper.querySelector(".line-numbers");
-          if (lineNumbersDiv) {
-            const lines = newText.trimEnd().split("\n");
-            lineNumbersDiv.textContent = lines.map((_, i) => i + 1).join("\n");
-          }
-          pre.setAttribute("data-raw-code", newText);
-        });
+        code.style.cursor = "pointer";
+        code.style.userSelect = "none";
 
         container.appendChild(lineNumbersWrapper);
         container.appendChild(code);
         pre.appendChild(container);
       }
+
+      // Add double-click handler to open editor
+      const handleDoubleClickCode = (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rawCode = pre.getAttribute("data-raw-code") || "";
+        const lang = pre.getAttribute("data-language") || "plaintext";
+        setCodeContent(rawCode);
+        setCodeLanguage(lang);
+        // Store reference to the pre block being edited
+        setSelectedElement(pre as HTMLElement);
+        setShowCodeEditor(true);
+      };
+
+      pre.addEventListener("dblclick", handleDoubleClickCode);
     });
   }, []);
 
@@ -609,25 +619,77 @@ export const RichTextEditor = ({
 
   const handleCodeSave = (code: string, language: string) => {
     if (!code.trim()) return;
-    restoreSelection();
-    editorRef.current?.focus();
-    const escapedCode = code
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-    const html = `<pre class="code-block-wrapper" data-language="${language}"><code data-language="${language}">${escapedCode}</code></pre><p><br></p>`;
-    document.execCommand("insertHTML", false, html);
-    setTimeout(() => {
-      handleContentChange();
-      applySyntaxHighlighting();
-    }, 10);
+
+    // Check if we're editing an existing code block
+    if (selectedElement && selectedElement.tagName === "PRE") {
+      // Update existing code block
+      const pre = selectedElement as HTMLPreElement;
+
+      // Remove old enhanced structure
+      pre.classList.remove("code-highlighted", "code-enhanced");
+      const toolbar = pre.querySelector(".code-toolbar");
+      const container = pre.querySelector(".code-container");
+      if (toolbar) toolbar.remove();
+      if (container) container.remove();
+
+      // Update with new code
+      const escapedCode = code
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+      pre.setAttribute("data-language", language);
+      pre.innerHTML = `<code data-language="${language}">${escapedCode}</code>`;
+
+      // Re-apply highlighting
+      setTimeout(() => {
+        handleContentChange();
+        applySyntaxHighlighting();
+      }, 10);
+
+      toast.success("Code block updated!");
+    } else {
+      // Insert new code block
+      restoreSelection();
+      editorRef.current?.focus();
+      const escapedCode = code
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+      const html = `<pre class="code-block-wrapper" data-language="${language}"><code data-language="${language}">${escapedCode}</code></pre><p><br></p>`;
+      document.execCommand("insertHTML", false, html);
+      setTimeout(() => {
+        handleContentChange();
+        applySyntaxHighlighting();
+      }, 10);
+
+      toast.success("Code block added!");
+    }
+
     setShowCodeEditor(false);
+    setSelectedElement(null);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     const t = e.target as HTMLElement;
+
+    // Check if clicked on code block
+    const preBlock = t.closest("pre.code-enhanced");
+    if (preBlock) {
+      e.preventDefault();
+      const rawCode = preBlock.getAttribute("data-raw-code") || "";
+      const lang = preBlock.getAttribute("data-language") || "plaintext";
+      setCodeContent(rawCode);
+      setCodeLanguage(lang);
+      setSelectedElement(preBlock as HTMLElement);
+      setShowCodeEditor(true);
+      return;
+    }
+
     if (t.tagName === "A") {
       e.preventDefault();
       setSelectedElement(t);
