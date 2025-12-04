@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { getRichTextStyles } from "@/lib/design/richTextStyles";
 import { uploadImageInIMGBB } from "@/lib/helper/serverHelperFunc";
 import {
-  highlightCode,
   createCodeToolbar,
   createLineNumbers,
 } from "@/lib/utils/codeHighlighter";
+import CodeBlockEditor from "@/components/shared/CodeBlockEditor";
 import {
   AlignCenter,
   AlignJustify,
@@ -60,7 +60,7 @@ export const RichTextEditor = ({
   const [showImageModal, setShowImageModal] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
-  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showCodeEditor, setShowCodeEditor] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkText, setLinkText] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -93,7 +93,6 @@ export const RichTextEditor = ({
   const imageModalRef = useRef<HTMLDivElement>(null);
   const tableModalRef = useRef<HTMLDivElement>(null);
   const columnModalRef = useRef<HTMLDivElement>(null);
-  const codeModalRef = useRef<HTMLDivElement>(null);
   const savedSelectionRef = useRef<Range | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -408,22 +407,10 @@ export const RichTextEditor = ({
         !columnModalRef.current.contains(t)
       )
         closeColumnModal();
-      if (
-        showCodeModal &&
-        codeModalRef.current &&
-        !codeModalRef.current.contains(t)
-      )
-        closeCodeModal();
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [
-    showLinkModal,
-    showImageModal,
-    showTableModal,
-    showColumnModal,
-    showCodeModal,
-  ]);
+  }, [showLinkModal, showImageModal, showTableModal, showColumnModal]);
 
   const openLinkModal = () => {
     saveSelection();
@@ -613,36 +600,30 @@ export const RichTextEditor = ({
     editorRef.current?.focus();
   };
 
-  const openCodeModal = () => {
+  const openCodeEditor = () => {
     saveSelection();
     setCodeLanguage("javascript");
     setCodeContent("");
-    setShowCodeModal(true);
+    setShowCodeEditor(true);
   };
 
-  const insertCodeBlock = () => {
-    if (!codeContent.trim()) return;
+  const handleCodeSave = (code: string, language: string) => {
+    if (!code.trim()) return;
     restoreSelection();
     editorRef.current?.focus();
-    const escapedCode = codeContent
+    const escapedCode = code
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
-    const html = `<pre class="code-block-wrapper" data-language="${codeLanguage}"><code data-language="${codeLanguage}">${escapedCode}</code></pre><p><br></p>`;
+    const html = `<pre class="code-block-wrapper" data-language="${language}"><code data-language="${language}">${escapedCode}</code></pre><p><br></p>`;
     document.execCommand("insertHTML", false, html);
     setTimeout(() => {
       handleContentChange();
       applySyntaxHighlighting();
     }, 10);
-    closeCodeModal();
-  };
-
-  const closeCodeModal = () => {
-    setShowCodeModal(false);
-    setCodeContent("");
-    editorRef.current?.focus();
+    setShowCodeEditor(false);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -712,31 +693,6 @@ export const RichTextEditor = ({
     { n: "Red", v: "#fee2e2" },
     { n: "Purple", v: "#e9d5ff" },
     { n: "None", v: "transparent" },
-  ];
-  const codeLanguages = [
-    { value: "javascript", label: "JavaScript" },
-    { value: "typescript", label: "TypeScript" },
-    { value: "python", label: "Python" },
-    { value: "java", label: "Java" },
-    { value: "c", label: "C" },
-    { value: "cpp", label: "C++" },
-    { value: "csharp", label: "C#" },
-    { value: "php", label: "PHP" },
-    { value: "ruby", label: "Ruby" },
-    { value: "go", label: "Go" },
-    { value: "rust", label: "Rust" },
-    { value: "swift", label: "Swift" },
-    { value: "kotlin", label: "Kotlin" },
-    { value: "html", label: "HTML" },
-    { value: "css", label: "CSS" },
-    { value: "scss", label: "SCSS" },
-    { value: "sql", label: "SQL" },
-    { value: "json", label: "JSON" },
-    { value: "xml", label: "XML" },
-    { value: "yaml", label: "YAML" },
-    { value: "bash", label: "Bash" },
-    { value: "powershell", label: "PowerShell" },
-    { value: "plaintext", label: "Plain Text" },
   ];
   const btns = [
     { c: "bold", i: Bold, t: "Bold" },
@@ -872,7 +828,7 @@ export const RichTextEditor = ({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={openCodeModal}
+            onClick={openCodeEditor}
             title="Code Block"
             className="h-9 w-9 p-0"
           >
@@ -1479,81 +1435,16 @@ export const RichTextEditor = ({
               </div>
             </div>
           )}
-          {showCodeModal && (
-            <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-[100] p-4">
-              <div
-                ref={codeModalRef}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto"
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold flex items-center gap-2">
-                    <Code2 className="h-6 w-6" />
-                    Insert Code Block
-                  </h3>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={closeCodeModal}
-                    className="h-10 w-10 p-0 rounded-full"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Language
-                    </label>
-                    <select
-                      value={codeLanguage}
-                      onChange={(e) => setCodeLanguage(e.target.value)}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
-                    >
-                      {codeLanguages.map((lang) => (
-                        <option key={lang.value} value={lang.value}>
-                          {lang.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">
-                      Code
-                    </label>
-                    <textarea
-                      value={codeContent}
-                      onChange={(e) => setCodeContent(e.target.value)}
-                      placeholder="Enter your code here..."
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 font-mono text-sm"
-                      rows={12}
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end mt-8 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={closeCodeModal}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={insertCodeBlock}
-                    disabled={!codeContent.trim()}
-                    className="bg-blue-600"
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    Insert
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       </div>
+      {showCodeEditor && (
+        <CodeBlockEditor
+          value={codeContent}
+          language={codeLanguage}
+          onSave={handleCodeSave}
+          onCancel={() => setShowCodeEditor(false)}
+        />
+      )}
       <style dangerouslySetInnerHTML={{ __html: getRichTextStyles() }} />
     </div>
   );

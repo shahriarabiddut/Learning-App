@@ -1,4 +1,6 @@
-// Shared code syntax highlighting utility
+// FIXED VERSION - Code syntax highlighting utility
+// This version properly handles nested contexts (comments, strings)
+
 export const highlightCode = (code: string, language: string): string => {
   const escapeHtml = (text: string) =>
     text.replace(/[&<>'"]/g, (char) => {
@@ -12,6 +14,29 @@ export const highlightCode = (code: string, language: string): string => {
       return escapeMap[char];
     });
 
+  // Helper to check if position is inside a placeholder
+  const isInsidePlaceholder = (text: string, position: number): boolean => {
+    const before = text.substring(0, position);
+    const openCount = (before.match(/__SPAN_START_/g) || []).length;
+    const closeCount = (before.match(/__SPAN_END__/g) || []).length;
+    return openCount > closeCount;
+  };
+
+  // Helper to safely replace without touching existing placeholders
+  const safeReplace = (
+    text: string,
+    regex: RegExp,
+    tokenClass: string
+  ): string => {
+    return text.replace(regex, (match, ...args) => {
+      const offset = args[args.length - 2]; // offset is second to last arg
+      if (isInsidePlaceholder(text, offset)) {
+        return match; // Don't replace if inside existing placeholder
+      }
+      return `__SPAN_START_${tokenClass}__${match}__SPAN_END__`;
+    });
+  };
+
   let highlighted = escapeHtml(code);
 
   // Language-specific highlighting
@@ -20,52 +45,72 @@ export const highlightCode = (code: string, language: string): string => {
     case "typescript":
     case "jsx":
     case "tsx":
-      highlighted = highlighted.replace(
-        /\b(const|let|var|function|class|if|else|for|while|return|import|export|from|async|await|try|catch|new|this|super|extends|implements|interface|type|enum)\b/g,
-        '<span class="token-keyword">$1</span>'
-      );
-      highlighted = highlighted.replace(
-        /(["'`])(?:(?=(\\?))\2.)*?\1/g,
-        '<span class="token-string">$&</span>'
-      );
+      // 1. Comments first (highest priority - protect from other highlighting)
       highlighted = highlighted.replace(
         /\/\/.*/g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
       );
       highlighted = highlighted.replace(
         /\/\*[\s\S]*?\*\//g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
       );
+      // 2. Strings
       highlighted = highlighted.replace(
-        /\b\d+\.?\d*\b/g,
-        '<span class="token-number">$&</span>'
+        /(["'`])(?:(?=(\\?))\2.)*?\1/g,
+        (match, ...args) => {
+          const offset = args[args.length - 2];
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `__SPAN_START_token-string__${match}__SPAN_END__`;
+        }
       );
+      // 3. Keywords
+      highlighted = safeReplace(
+        highlighted,
+        /\b(const|let|var|function|class|if|else|for|while|return|import|export|from|async|await|try|catch|new|this|super|extends|implements|interface|type|enum)\b/g,
+        "token-keyword"
+      );
+      // 4. Numbers
+      highlighted = safeReplace(highlighted, /\b\d+\.?\d*\b/g, "token-number");
+      // 5. Functions
       highlighted = highlighted.replace(
         /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g,
-        '<span class="token-function">$1</span>('
+        (match, funcName, offset) => {
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `__SPAN_START_token-function__${funcName}__SPAN_END__(`;
+        }
       );
       break;
 
     case "python":
-      highlighted = highlighted.replace(
-        /\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|with|lambda|pass|break|continue|and|or|not|in|is|None|True|False|finally|raise|assert|global|nonlocal|del|yield)\b/g,
-        '<span class="token-keyword">$1</span>'
-      );
-      highlighted = highlighted.replace(
-        /(["'])(?:(?=(\\?))\2.)*?\1/g,
-        '<span class="token-string">$&</span>'
-      );
+      // 1. Comments first
       highlighted = highlighted.replace(
         /#.*/g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
       );
+      // 2. Strings
       highlighted = highlighted.replace(
-        /\b\d+\.?\d*\b/g,
-        '<span class="token-number">$&</span>'
+        /(["'])(?:(?=(\\?))\2.)*?\1/g,
+        (match, ...args) => {
+          const offset = args[args.length - 2];
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `__SPAN_START_token-string__${match}__SPAN_END__`;
+        }
       );
+      // 3. Keywords
+      highlighted = safeReplace(
+        highlighted,
+        /\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|with|lambda|pass|break|continue|and|or|not|in|is|None|True|False|finally|raise|assert|global|nonlocal|del|yield)\b/g,
+        "token-keyword"
+      );
+      // 4. Numbers
+      highlighted = safeReplace(highlighted, /\b\d+\.?\d*\b/g, "token-number");
+      // 5. Functions
       highlighted = highlighted.replace(
         /\bdef\s+([a-zA-Z_][a-zA-Z0-9_]*)/g,
-        'def <span class="token-function">$1</span>'
+        (match, funcName, offset) => {
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `def __SPAN_START_token-function__${funcName}__SPAN_END__`;
+        }
       );
       break;
 
@@ -73,98 +118,147 @@ export const highlightCode = (code: string, language: string): string => {
     case "c":
     case "cpp":
     case "csharp":
-      highlighted = highlighted.replace(
-        /\b(public|private|protected|class|void|int|String|boolean|if|else|for|while|return|new|static|final|abstract|interface|extends|implements|try|catch|throw|throws|float|double|char|long|short|byte)\b/g,
-        '<span class="token-keyword">$1</span>'
-      );
-      highlighted = highlighted.replace(
-        /(["'])(?:(?=(\\?))\2.)*?\1/g,
-        '<span class="token-string">$&</span>'
-      );
+      // 1. Comments first (CRITICAL for C/C++)
       highlighted = highlighted.replace(
         /\/\/.*/g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
       );
       highlighted = highlighted.replace(
         /\/\*[\s\S]*?\*\//g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
       );
+      // 2. Strings
       highlighted = highlighted.replace(
-        /\b\d+\.?\d*\b/g,
-        '<span class="token-number">$&</span>'
+        /(["'])(?:(?=(\\?))\2.)*?\1/g,
+        (match, ...args) => {
+          const offset = args[args.length - 2];
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `__SPAN_START_token-string__${match}__SPAN_END__`;
+        }
       );
+      // 3. Preprocessor directives (for C/C++)
+      if (language === "c" || language === "cpp") {
+        highlighted = safeReplace(
+          highlighted,
+          /^#\s*(include|define|ifdef|ifndef|endif|pragma|undef)\b/gm,
+          "token-keyword"
+        );
+      }
+      // 4. Keywords
+      highlighted = safeReplace(
+        highlighted,
+        /\b(public|private|protected|class|void|int|float|double|char|long|short|byte|boolean|String|if|else|for|while|do|return|new|static|final|abstract|interface|extends|implements|try|catch|throw|throws|struct|typedef|enum|union|const|sizeof|signed|unsigned|auto|register|volatile|extern|break|continue|switch|case|default|goto|main|printf|scanf|include)\b/g,
+        "token-keyword"
+      );
+      // 5. Numbers
+      highlighted = safeReplace(highlighted, /\b\d+\.?\d*\b/g, "token-number");
       break;
 
     case "html":
     case "xml":
       highlighted = highlighted.replace(
-        /&lt;\/?\w+(?:\s+[\w-]+(?:=(?:"[^"]*"|'[^']*'))?)*\s*\/?&gt;/g,
-        '<span class="token-tag">$&</span>'
+        /&lt;\/?\w+(?:\s+[\w-]+(?:=(?:&quot;[^&]*&quot;|&#39;[^&]*&#39;))?)*\s*\/?&gt;/g,
+        (match) => `__SPAN_START_token-tag__${match}__SPAN_END__`
       );
       highlighted = highlighted.replace(
         /\s([\w-]+)=/g,
-        ' <span class="token-attr">$1</span>='
+        (match, attr, offset) => {
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return ` __SPAN_START_token-attr__${attr}__SPAN_END__=`;
+        }
       );
       highlighted = highlighted.replace(
         /=(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,
-        '=<span class="token-string">$1</span>'
+        (match, value, offset) => {
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `=__SPAN_START_token-string__${value}__SPAN_END__`;
+        }
       );
       break;
 
     case "css":
     case "scss":
-      highlighted = highlighted.replace(
-        /^([.#]?[a-zA-Z][a-zA-Z0-9-_]*)\s*\{/gm,
-        '<span class="token-selector">$1</span> {'
-      );
-      highlighted = highlighted.replace(
-        /\b([a-z-]+)\s*:/g,
-        '<span class="token-property">$1</span>:'
-      );
-      highlighted = highlighted.replace(
-        /:\s*([^;]+);/g,
-        ': <span class="token-value">$1</span>;'
-      );
+      // 1. Comments first
       highlighted = highlighted.replace(
         /\/\*[\s\S]*?\*\//g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
+      );
+      // 2. Selectors
+      highlighted = highlighted.replace(
+        /^([.#]?[a-zA-Z][a-zA-Z0-9-_]*)\s*\{/gm,
+        (match, selector, offset) => {
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `__SPAN_START_token-selector__${selector}__SPAN_END__ {`;
+        }
+      );
+      // 3. Properties
+      highlighted = safeReplace(
+        highlighted,
+        /\b([a-z-]+)\s*:/g,
+        "token-property"
+      );
+      // 4. Values
+      highlighted = highlighted.replace(
+        /:\s*([^;]+);/g,
+        (match, value, offset) => {
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `: __SPAN_START_token-value__${value}__SPAN_END__;`;
+        }
       );
       break;
 
     case "sql":
-      highlighted = highlighted.replace(
-        /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|TABLE|DATABASE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|NULL|PRIMARY|KEY|FOREIGN|INDEX|ALTER|ADD|COLUMN)\b/gi,
-        '<span class="token-keyword">$&</span>'
-      );
-      highlighted = highlighted.replace(
-        /(["'])(?:(?=(\\?))\2.)*?\1/g,
-        '<span class="token-string">$&</span>'
-      );
+      // 1. Comments first
       highlighted = highlighted.replace(
         /--.*/g,
-        '<span class="token-comment">$&</span>'
+        (match) => `__SPAN_START_token-comment__${match}__SPAN_END__`
+      );
+      // 2. Strings
+      highlighted = highlighted.replace(
+        /(["'])(?:(?=(\\?))\2.)*?\1/g,
+        (match, ...args) => {
+          const offset = args[args.length - 2];
+          if (isInsidePlaceholder(highlighted, offset)) return match;
+          return `__SPAN_START_token-string__${match}__SPAN_END__`;
+        }
+      );
+      // 3. Keywords
+      highlighted = safeReplace(
+        highlighted,
+        /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|DROP|TABLE|DATABASE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|NULL|PRIMARY|KEY|FOREIGN|INDEX|ALTER|ADD|COLUMN)\b/gi,
+        "token-keyword"
       );
       break;
 
     case "json":
+      // JSON doesn't have comments, so simpler
       highlighted = highlighted.replace(
         /&quot;([^&]+)&quot;\s*:/g,
-        '<span class="token-property">&quot;$1&quot;</span>:'
+        (match, prop) =>
+          `__SPAN_START_token-property__&quot;${prop}&quot;__SPAN_END__:`
       );
       highlighted = highlighted.replace(
         /:\s*&quot;([^&]*)&quot;/g,
-        ': <span class="token-string">&quot;$1&quot;</span>'
+        (match, value) =>
+          `: __SPAN_START_token-string__&quot;${value}&quot;__SPAN_END__`
       );
       highlighted = highlighted.replace(
         /:\s*(\d+\.?\d*)/g,
-        ': <span class="token-number">$1</span>'
+        (match, num) => `: __SPAN_START_token-number__${num}__SPAN_END__`
       );
       highlighted = highlighted.replace(
         /\b(true|false|null)\b/g,
-        '<span class="token-boolean">$1</span>'
+        (match) => `__SPAN_START_token-boolean__${match}__SPAN_END__`
       );
       break;
   }
+
+  // Replace placeholders with actual HTML spans
+  // CRITICAL: Use [a-z-]+ to match "token-keyword", "token-number", etc.
+  highlighted = highlighted.replace(
+    /__SPAN_START_([a-z-]+)__(.+?)__SPAN_END__/g,
+    '<span class="$1">$2</span>'
+  );
 
   return highlighted;
 };

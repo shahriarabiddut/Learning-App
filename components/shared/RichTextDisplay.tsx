@@ -1,7 +1,7 @@
 import { getRichTextStyles } from "@/lib/design/richTextStyles";
-// TODO: Re-enable highlightCode when syntax highlighting is fixed
 import {
-  /* highlightCode, */ createCodeToolbar,
+  highlightCode,
+  createCodeToolbar,
   createLineNumbers,
 } from "@/lib/utils/codeHighlighter";
 import React, { useEffect, useRef } from "react";
@@ -75,25 +75,19 @@ const RichTextDisplay = ({
       // Create line numbers wrapper
       const lineNumbersWrapper = createLineNumbers(text);
 
-      // TODO: Fix syntax highlighting rendering issue
-      // Currently showing raw HTML tokens instead of rendered colors
-      // Need to investigate proper HTML rendering in frontend display
+      // Create new code element with syntax highlighting
+      const highlightedCode = document.createElement("code");
+      highlightedCode.setAttribute("data-language", language);
+      highlightedCode.contentEditable = "false";
+      highlightedCode.style.userSelect = "text";
+      highlightedCode.style.cursor = "default";
 
-      // Create new code element with PLAIN TEXT (no highlighting for now)
-      const plainCode = document.createElement("code");
-      plainCode.setAttribute("data-language", language);
-      plainCode.textContent = text; // Plain text, no HTML rendering
-      plainCode.contentEditable = "false";
-      plainCode.style.userSelect = "text";
-      plainCode.style.cursor = "default";
-      plainCode.style.color = "#e2e8f0"; // Light gray color for plain text
-
-      // COMMENTED OUT: Syntax highlighting (needs fix)
-      // plainCode.innerHTML = highlightCode(text, language);
+      // Apply syntax highlighting - innerHTML now contains proper HTML spans
+      highlightedCode.innerHTML = highlightCode(text, language);
 
       // Build structure
       container.appendChild(lineNumbersWrapper);
-      container.appendChild(plainCode);
+      container.appendChild(highlightedCode);
 
       // Remove old code and add container
       if (code.parentNode === pre) {
